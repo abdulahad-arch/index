@@ -19,239 +19,184 @@
   .result{color:#c53030;font-weight:700;margin-top:8px}
   .small{font-size:13px;color:#666}
   .controls .btn{flex:1;min-width:110px}
-  .topline{display:flex;gap:8px;align-items:center}
   pre {background:#0f1724;color:#e6eef8;padding:8px;border-radius:6px;overflow:auto}
 </style>
 </head>
 <body>
-<header>Smart AgriAdvisor (Wi-Fi + Bluetooth)</header>
+<header>Smart AgriAdvisor</header>
 <div class="container">
 
-  <!-- ESP32 Connection -->
+  <!-- Wi-Fi -->
   <div class="card">
-    <label>ESP32 Wi-Fi Connection</label>
+    <label>ESP32 Wi-Fi</label>
     <div class="row">
-      <input id="espIp" placeholder="192.168.4.1" value="192.168.4.1"/>
+      <input id="espIp" value="192.168.4.1"/>
       <button id="btnConnect">Connect</button>
       <button id="btnDisconnect" class="gray">Disconnect</button>
     </div>
-    <div class="small">Connect phone & ESP32 to same network (or ESP32 AP mode).</div>
     <span id="loadMsg" class="small"></span>
   </div>
 
   <!-- Bluetooth -->
   <div class="card">
-    <label>ESP32 Bluetooth Connection</label>
-    <button id="btnBTConnect">🔗 Connect via Bluetooth</button>
-    <button id="btnBTDisconnect" class="gray">Disconnect BT</button>
+    <label>ESP32 Bluetooth</label>
+    <button id="btnBTScan">🔍 Scan Devices</button>
+    <select id="btDevices"></select>
+    <button id="btnBTConnect">🔗 Connect</button>
+    <button id="btnBTDisconnect" class="gray">Disconnect</button>
     <div id="btStatus" class="small">BT: Not connected</div>
   </div>
 
-  <!-- Soil Readings -->
+  <!-- Soil -->
   <div class="card">
     <label>Soil Readings</label>
     <div id="lblPH">pH: --</div>
     <div id="lblMoist">Moisture: --</div>
     <div id="lblTemp">Temp: --</div>
-    <div class="row" style="margin-top:8px">
-      <button id="btnTakeReading">Take Soil Reading</button>
-      <button id="btnRefreshReading" class="gray">Refresh Reading</button>
-    </div>
+    <button id="btnTakeReading">Take Soil Reading</button>
   </div>
 
-  <!-- Crop Selection -->
+  <!-- Crops -->
   <div class="card">
     <label>Crop Selection</label>
-    <select id="cropSelect"><option value="">-- Load crops --</option></select>
-    <div class="row controls" style="margin-top:8px">
-      <button id="btnCheck" class="btn">Check Suitability</button>
-      <button id="btnAI" class="btn secondary">AI Mode (Top suggestions)</button>
-    </div>
+    <select id="cropSelect"></select>
+    <button id="btnCheck">Check Suitability</button>
+    <button id="btnAI" class="secondary">AI Suggest</button>
     <div id="lblResult" class="result"></div>
   </div>
 
   <!-- Translator -->
   <div class="card">
-    <label>🌐 Translator</label>
-    <input id="txtTranslate" placeholder="Enter text in English"/>
+    <label>Translator</label>
+    <input id="txtTranslate" placeholder="Enter text"/>
     <select id="langSelect">
       <option value="hi">Hindi</option>
       <option value="te">Telugu</option>
     </select>
     <button id="btnTranslate">Translate</button>
-    <div id="lblTranslation" class="result"></div>
+    <div id="lblTranslation"></div>
   </div>
 
   <!-- Voice Assistant -->
   <div class="card">
-    <label>🎤 Voice Assistant</label>
-    <button id="btnVoice">Start Listening</button>
-    <div id="lblVoice" class="small"></div>
-  </div>
-
-  <!-- Robot Controls -->
-  <div class="card">
-    <label>Robot Controls</label>
-    <div class="row" style="margin-bottom:8px">
-      <button class="btn" data-act="forward">⬆ Forward</button>
-      <button class="btn" data-act="left">⬅ Left</button>
-      <button class="btn" data-act="stop">🛑 Stop</button>
-      <button class="btn" data-act="right">➡ Right</button>
-      <button class="btn" data-act="backward">⬇ Backward</button>
-      <button class="btn" data-act="servoDip">⚙️ Dip Servo</button>
-      <button class="btn" data-act="servoLift">⚙️ Lift Servo</button>
-    </div>
+    <label>Voice Assistant</label>
+    <button id="btnVoice">🎤 Speak</button>
+    <div id="lblVoice"></div>
   </div>
 
   <!-- Debug -->
   <div class="card">
-    <label>Debug / Raw Response</label>
+    <label>Debug</label>
     <pre id="debug">No data yet</pre>
   </div>
 
 </div>
 
 <script>
-/* --- Crop DB (fallback 50 crops) --- */
-let cropDB = [];
-function fallbackDB(){
-  cropDB = [
-    ["Wheat",6,7.5,40,15],["Rice",5.5,7,60,20],["Maize",5.5,7,50,18],
-    ["Cotton",6,8,50,22],["Potato",5.5,7,30,15],["Tomato",5.5,7,30,20],
-    ["Onion",6,7,35,18],["Sugarcane",6,8,60,21],["Soybean",6,7.5,40,20],
-    ["Peanut",5.5,7,35,22],["Sunflower",6,7.5,30,18],["Barley",6,7.5,35,15],
-    ["Oats",5,7.5,35,15],["Millet",5,7.5,30,20],["Sorghum",5.5,7.5,35,22],
-    ["Chickpea",6,8,30,18],["Lentil",6,8,30,16],["Pea",6,7.5,35,15],
-    ["Mustard",5.5,7.5,30,18],["Groundnut",5.5,7.5,35,22],["Sesame",5.5,7.5,30,20],
-    ["Castor",5.5,7.5,30,20],["Jute",6,7.5,50,20],["Tea",4.5,6,60,18],
-    ["Coffee",5,6.5,60,20],["Banana",5.5,7.5,50,22],["Mango",5.5,7.5,30,25],
-    ["Apple",6,7,40,15],["Orange",5.5,6.5,40,20],["Grapes",6,7.5,35,20],
-    ["Papaya",6,7.5,40,22],["Guava",5,7.5,35,20],["Pineapple",4.5,6.5,50,22],
-    ["Pomegranate",5.5,7.5,35,20],["Cabbage",6,7.5,40,15],["Cauliflower",6,7.5,40,15],
-    ["Carrot",6,7,35,15],["Spinach",6,7.5,35,15],["Cucumber",5.5,7.5,40,18],
-    ["Chilli",5.5,7.5,40,20],["Brinjal",5.5,7.5,40,20],["Okra",6,7.5,40,20],
-    ["Pumpkin",6,7.5,40,18],["Melon",5.5,7.5,35,20],["Watermelon",5.5,7.5,35,22],
-    ["Strawberry",5.5,7,40,18],["Pear",6,7,35,15],["Plum",6,7.5,35,15]
-  ];
-  const sel=document.getElementById('cropSelect');
-  sel.innerHTML="";
-  cropDB.forEach(r=>{
-    const opt=document.createElement('option');
-    opt.value=r[0]; opt.text=r[0];
-    sel.appendChild(opt);
-  });
-}
-window.onload=fallbackDB;
-
-/* --- Wi-Fi ESP32 --- */
+/* --- Dummy Crops DB --- */
+let cropDB=[["Wheat",6,7.5,40,15],["Rice",5.5,7,60,20],["Maize",5.5,7,50,18]];
 let phVal=0, moistVal=0, tempVal=0;
-let espConnected=false, espUrl="";
-function setStatus(t){ document.getElementById('loadMsg').innerText=t; }
 
-document.getElementById('btnConnect').onclick=()=>{
-  const ip=document.getElementById('espIp').value.trim();
-  if(!ip){alert("Enter ESP32 IP");return;}
-  espUrl=ip.startsWith("http")?ip:"http://"+ip;
-  espConnected=true;
-  setStatus("Connected to "+espUrl);
+/* --- Wi-Fi --- */
+let espUrl="", espConnected=false;
+function setStatus(t){document.getElementById('loadMsg').innerText=t;}
+document.getElementById("btnConnect").onclick=()=>{
+  espUrl="http://"+document.getElementById("espIp").value;
+  espConnected=true; setStatus("Connected to "+espUrl);
 };
-document.getElementById('btnDisconnect').onclick=()=>{
-  espConnected=false; espUrl=""; setStatus("Disconnected");
-};
-
+document.getElementById("btnDisconnect").onclick=()=>{espConnected=false;setStatus("Disconnected");};
 async function callEsp(path){
-  if(!espConnected){alert("ESP32 not connected!");return null;}
-  try{
-    const r=await fetch(espUrl+path);
-    const txt=await r.text();
-    document.getElementById('debug').innerText=txt;
-    return txt;
-  }catch(e){
-    document.getElementById('debug').innerText="ERROR: "+e;
-    return null;
-  }
+  if(!espConnected)return;
+  const r=await fetch(espUrl+path); const txt=await r.text();
+  document.getElementById("debug").innerText=txt; return txt;
 }
-function parseSensorText(txt){
-  const nums=txt.match(/-?\d+(\.\d+)?/g);
-  if(nums&&nums.length>=3){
-    phVal=parseFloat(nums[0]); moistVal=parseFloat(nums[1]); tempVal=parseFloat(nums[2]);
-  }
-  document.getElementById('lblPH').innerText="pH: "+phVal;
-  document.getElementById('lblMoist').innerText="Moisture: "+moistVal;
-  document.getElementById('lblTemp').innerText="Temp: "+tempVal;
-}
-document.getElementById('btnTakeReading').onclick=async()=>{
-  const txt=await callEsp("/readSensors"); if(txt) parseSensorText(txt);
-};
-document.getElementById('btnRefreshReading').onclick=async()=>{
-  const txt=await callEsp("/readSensors"); if(txt) parseSensorText(txt);
-};
-document.querySelectorAll('.btn[data-act]').forEach(b=>{
-  b.onclick=()=>{ callEsp("/"+b.dataset.act); };
-});
 
-/* --- Bluetooth (Web Bluetooth API) --- */
-let btDevice=null, btServer=null, btService=null, btChar=null;
-document.getElementById("btnBTConnect").onclick=async()=>{
-  try{
-    btDevice=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[0xFFE0]});
-    btServer=await btDevice.gatt.connect();
-    btService=await btServer.getPrimaryService(0xFFE0);
-    btChar=await btService.getCharacteristic(0xFFE1);
-    document.getElementById("btStatus").innerText="BT: Connected to "+btDevice.name;
-  }catch(e){ alert("BT Error: "+e); }
+/* --- Bluetooth --- (Cordova plugin only) */
+let btDevice=null;
+document.getElementById("btnBTScan").onclick=()=>{
+  if(window.bluetoothSerial){
+    bluetoothSerial.list(devices=>{
+      let sel=document.getElementById("btDevices"); sel.innerHTML="";
+      devices.forEach(d=>{
+        let o=document.createElement("option"); o.value=d.address; o.text=d.name; sel.appendChild(o);
+      });
+    },err=>alert("BT Scan error:"+err));
+  }else alert("BT only works in APK build.");
+};
+document.getElementById("btnBTConnect").onclick=()=>{
+  let addr=document.getElementById("btDevices").value;
+  if(window.bluetoothSerial){
+    bluetoothSerial.connect(addr,()=>{document.getElementById("btStatus").innerText="BT: Connected";},()=>alert("BT connect fail"));
+  }
 };
 document.getElementById("btnBTDisconnect").onclick=()=>{
-  if(btDevice) btDevice.gatt.disconnect();
-  document.getElementById("btStatus").innerText="BT: Disconnected";
+  if(window.bluetoothSerial) bluetoothSerial.disconnect(()=>{document.getElementById("btStatus").innerText="BT: Disconnected";});
 };
-function btSend(cmd){
-  if(btChar){
-    let data=new TextEncoder().encode(cmd+"\n");
-    btChar.writeValue(data);
-  }else alert("BT not connected");
-}
 
-/* --- Crop Suitability --- */
-document.getElementById('btnCheck').onclick=()=>{
-  const crop=document.getElementById('cropSelect').value;
-  const row=cropDB.find(r=>r[0]==crop);
-  if(!row)return;
-  const [n,minPH,maxPH,minM,minT]=row;
-  const ok=phVal>=minPH&&phVal<=maxPH&&moistVal>=minM&&tempVal>=minT;
-  document.getElementById('lblResult').innerText=ok?`✅ ${n} is Suitable`:`❌ ${n} Not Suitable`;
+/* --- Soil --- */
+document.getElementById("btnTakeReading").onclick=async()=>{
+  let txt=await callEsp("/readSensors");
+  if(txt){
+    let n=txt.match(/-?\d+(\.\d+)?/g);
+    if(n){phVal=n[0];moistVal=n[1];tempVal=n[2];}
+    document.getElementById("lblPH").innerText="pH: "+phVal;
+    document.getElementById("lblMoist").innerText="Moisture: "+moistVal;
+    document.getElementById("lblTemp").innerText="Temp: "+tempVal;
+  }
 };
-document.getElementById('btnAI').onclick=()=>{
-  const list=cropDB.filter(r=>phVal>=r[1]&&phVal<=r[2]&&moistVal>=r[3]&&tempVal>=r[4]).map(r=>r[0]);
-  document.getElementById('lblResult').innerText=list.length?"AI Suggests: "+list.slice(0,5).join(", "):"No matches";
+
+/* --- Crops --- */
+function populate(){let s=document.getElementById("cropSelect");cropDB.forEach(r=>{let o=document.createElement("option");o.value=r[0];o.text=r[0];s.appendChild(o);});}
+populate();
+document.getElementById("btnCheck").onclick=()=>{
+  let crop=document.getElementById("cropSelect").value;
+  let r=cropDB.find(x=>x[0]==crop);
+  if(r){let ok=phVal>=r[1]&&phVal<=r[2]&&moistVal>=r[3]&&tempVal>=r[4];
+    document.getElementById("lblResult").innerText=ok?"✅ Suitable":"❌ Not Suitable";}
+};
+document.getElementById("btnAI").onclick=()=>{
+  let list=cropDB.filter(r=>phVal>=r[1]&&phVal<=r[2]&&moistVal>=r[3]&&tempVal>=r[4]);
+  document.getElementById("lblResult").innerText="AI Suggests: "+list.map(x=>x[0]).join(", ");
 };
 
 /* --- Translator --- */
-document.getElementById('btnTranslate').onclick=async()=>{
-  const txt=document.getElementById('txtTranslate').value;
-  const lang=document.getElementById('langSelect').value;
-  if(!txt){alert("Enter text");return;}
-  const url=`https://api.mymemory.translated.net/get?q=${encodeURIComponent(txt)}&langpair=en|${lang}`;
-  try{
-    const r=await fetch(url); const j=await r.json();
-    document.getElementById('lblTranslation').innerText=j.responseData.translatedText;
-  }catch(e){ document.getElementById('lblTranslation').innerText="Error: "+e; }
+document.getElementById("btnTranslate").onclick=async()=>{
+  let txt=document.getElementById("txtTranslate").value;
+  let lang=document.getElementById("langSelect").value;
+  let url=`https://api.mymemory.translated.net/get?q=${encodeURIComponent(txt)}&langpair=en|${lang}`;
+  let r=await fetch(url); let j=await r.json();
+  document.getElementById("lblTranslation").innerText=j.responseData.translatedText;
 };
 
-/* --- Voice Assistant --- */
-document.getElementById('btnVoice').onclick=()=>{
+/* --- Voice Assistant with AI --- */
+document.getElementById("btnVoice").onclick=()=>{
   const rec=new(window.SpeechRecognition||window.webkitSpeechRecognition)();
   rec.lang="en-US"; rec.start();
-  rec.onresult=e=>{
-    const speech=e.results[0][0].transcript;
-    document.getElementById('lblVoice').innerText="You said: "+speech;
-    if(speech.includes("forward")) btSend("forward");
-    if(speech.includes("stop")) btSend("stop");
-    if(speech.includes("left")) btSend("left");
-    if(speech.includes("right")) btSend("right");
-    if(speech.includes("back")) btSend("backward");
+  rec.onresult=async e=>{
+    let speech=e.results[0][0].transcript.toLowerCase();
+    document.getElementById("lblVoice").innerText="You said: "+speech;
+
+    if(speech.includes("forward")) callEsp("/forward");
+    else if(speech.includes("stop")) callEsp("/stop");
+    else if(speech.includes("soil")||speech.includes("reading")){
+      let txt=await callEsp("/readSensors");
+      document.getElementById("lblVoice").innerText="Soil Reading: "+txt;
+    }
+    else if(speech.includes("suggest crop")){
+      let list=cropDB.filter(r=>phVal>=r[1]&&phVal<=r[2]&&moistVal>=r[3]&&tempVal>=r[4]);
+      document.getElementById("lblVoice").innerText="AI Suggests: "+list.map(x=>x[0]).join(", ");
+    }
+    else if(speech.includes("translate")){
+      let parts=speech.split("translate");
+      if(parts[1]){
+        let txt=parts[1].trim();
+        let url=`https://api.mymemory.translated.net/get?q=${encodeURIComponent(txt)}&langpair=en|te`;
+        let r=await fetch(url); let j=await r.json();
+        document.getElementById("lblVoice").innerText="Telugu: "+j.responseData.translatedText;
+      }
+    }
   };
 };
 </script>
 </body>
-</html>
+</html>   
