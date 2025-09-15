@@ -35,23 +35,16 @@
     <span id="loadMsg" class="small"></span>
   </div>
 
-  <!-- Bluetooth -->
-  <div class="card">
-    <label>ESP32 Bluetooth</label>
-    <button id="btnBTScan">🔍 Scan Devices</button>
-    <select id="btDevices"></select>
-    <button id="btnBTConnect">🔗 Connect</button>
-    <button id="btnBTDisconnect" class="gray">Disconnect</button>
-    <div id="btStatus" class="small">BT: Not connected</div>
-  </div>
-
   <!-- Soil -->
   <div class="card">
     <label>Soil Readings</label>
     <div id="lblPH">pH: --</div>
     <div id="lblMoist">Moisture: --</div>
     <div id="lblTemp">Temp: --</div>
-    <button id="btnTakeReading">Take Soil Reading</button>
+    <div class="row">
+      <button id="btnTakeReading">Take Soil Reading</button>
+      <button id="btnRefresh" class="secondary">Refresh</button>
+    </div>
     <div id="logArea" class="small"></div>
   </div>
 
@@ -115,41 +108,54 @@
 </div>
 
 <script>
-/* --- Crops DB --- */
-let cropDB=[["Wheat",6,7.5,40,15,2000],["Rice",5.5,7,60,20,1800],["Maize",5.5,7,50,18,1500]];
+/* --- Crops DB (50 crops with price Rs/quintal) --- */
+let cropDB=[
+  ["Wheat",6,7.5,40,15,2000],["Rice",5.5,7,60,20,1800],["Maize",5.5,7,50,18,1500],
+  ["Cotton",6,8,50,22,5000],["Potato",5.5,7,30,15,1200],["Tomato",5.5,7,30,20,1500],
+  ["Onion",6,7,35,18,1400],["Sugarcane",6,8,60,21,3000],["Soybean",6,7.5,40,20,2500],
+  ["Peanut",5.5,7,35,22,3000],["Sunflower",6,7.5,30,18,3200],["Barley",6,7.5,35,15,1600],
+  ["Oats",5,7.5,35,15,1800],["Millet",5,7.5,30,20,1400],["Sorghum",5.5,7.5,35,22,1600],
+  ["Chickpea",6,8,30,18,4000],["Lentil",6,8,30,16,4500],["Pea",6,7.5,35,15,2800],
+  ["Mustard",5.5,7.5,30,18,5000],["Groundnut",5.5,7.5,35,22,3500],["Sesame",5.5,7.5,30,20,6000],
+  ["Castor",5.5,7.5,30,20,4000],["Jute",6,7.5,50,20,2500],["Tea",4.5,6,60,18,12000],
+  ["Coffee",5,6.5,60,20,15000],["Banana",5.5,7.5,50,22,1000],["Mango",5.5,7.5,30,25,3000],
+  ["Apple",6,7,40,15,5000],["Orange",5.5,6.5,40,20,4000],["Grapes",6,7.5,35,20,4500],
+  ["Papaya",6,7.5,40,22,2000],["Guava",5,7.5,35,20,2500],["Pineapple",4.5,6.5,50,22,3000],
+  ["Pomegranate",5.5,7.5,35,20,5000],["Cabbage",6,7.5,40,15,1200],["Cauliflower",6,7.5,40,15,1400],
+  ["Carrot",6,7,35,15,2000],["Spinach",6,7.5,35,15,1000],["Cucumber",5.5,7.5,40,18,1500],
+  ["Chilli",5.5,7.5,40,20,6000],["Brinjal",5.5,7.5,40,20,2000],["Okra",6,7.5,40,20,2500],
+  ["Pumpkin",6,7.5,40,18,1500],["Melon",5.5,7.5,35,20,2000],["Watermelon",5.5,7.5,35,22,1800],
+  ["Strawberry",5.5,7,40,18,8000],["Pear",6,7,35,15,3500],["Plum",6,7.5,35,15,3000]
+];
 let phVal=0, moistVal=0, tempVal=0;
 
 /* --- Wi-Fi --- */
 let espUrl="", espConnected=false;
 function setStatus(t){document.getElementById('loadMsg').innerText=t;}
-document.getElementById("btnConnect").onclick=()=>{
+
+document.getElementById("btnConnect").onclick=async()=>{
   espUrl="http://"+document.getElementById("espIp").value;
-  espConnected=true; setStatus("Connected to "+espUrl);
+  try{
+    let r=await fetch(espUrl+"/");
+    if(r.ok){espConnected=true;alert("✅ ESP32 Connected!");setStatus("Connected to "+espUrl);}
+    else{throw new Error("Not OK");}
+  }catch(e){espConnected=false;alert("❌ ESP32 Not Connected");setStatus("Failed to connect");}
 };
+
 document.getElementById("btnDisconnect").onclick=()=>{espConnected=false;setStatus("Disconnected");};
+
 async function callEsp(path){
   if(!espConnected)return;
   try{
-    const r=await fetch(espUrl+path); const txt=await r.text();
-    document.getElementById("debug").innerText=txt; return txt;
+    const r=await fetch(espUrl+path);
+    const txt=await r.text();
+    document.getElementById("debug").innerText=txt;
+    return txt;
   }catch(e){document.getElementById("debug").innerText="Error: "+e;}
 }
 
-/* --- Bluetooth (Cordova plugin only) --- */
-function btSend(cmd){
-  if(window.bluetoothSerial){
-    bluetoothSerial.write(cmd+"\n");
-  }
-}
-
-/* --- Dual Mode Sender --- */
-function sendCommand(cmd){
-  callEsp("/"+cmd);  // Wi-Fi
-  btSend(cmd);       // Bluetooth
-}
-
 /* --- Soil --- */
-document.getElementById("btnTakeReading").onclick=async()=>{
+async function readSoil(){
   let txt=await callEsp("/readSensors");
   if(txt){
     let n=txt.match(/-?\d+(\.\d+)?/g);
@@ -157,13 +163,14 @@ document.getElementById("btnTakeReading").onclick=async()=>{
     document.getElementById("lblPH").innerText="pH: "+phVal;
     document.getElementById("lblMoist").innerText="Moisture: "+moistVal;
     document.getElementById("lblTemp").innerText="Temp: "+tempVal;
-    // log locally
     let logs=JSON.parse(localStorage.getItem("soilLogs")||"[]");
     logs.push({ph:phVal,moist:moistVal,temp:tempVal,time:new Date().toLocaleString()});
     localStorage.setItem("soilLogs",JSON.stringify(logs));
     document.getElementById("logArea").innerText="Last 3 logs:\n"+logs.slice(-3).map(l=>`${l.time} → pH:${l.ph}, M:${l.moist}, T:${l.temp}`).join("\n");
   }
-};
+}
+document.getElementById("btnTakeReading").onclick=readSoil;
+document.getElementById("btnRefresh").onclick=readSoil;
 
 /* --- Crops --- */
 function populate(){let s=document.getElementById("cropSelect");cropDB.forEach(r=>{let o=document.createElement("option");o.value=r[0];o.text=r[0];s.appendChild(o);});}
@@ -176,12 +183,12 @@ document.getElementById("btnCheck").onclick=()=>{
 };
 document.getElementById("btnAI").onclick=()=>{
   let list=cropDB.filter(r=>phVal>=r[1]&&phVal<=r[2]&&moistVal>=r[3]&&tempVal>=r[4]);
-  document.getElementById("lblResult").innerText="AI Suggests: "+list.map(x=>x[0]).join(", ");
+  document.getElementById("lblResult").innerText=list.length? "AI Suggests: "+list.map(x=>x[0]).join(", "):"No suitable crop";
 };
 
 /* --- Robot Controls --- */
 document.querySelectorAll("button[data-act]").forEach(b=>{
-  b.onclick=()=>sendCommand(b.dataset.act);
+  b.onclick=()=>callEsp("/"+b.dataset.act);
 });
 
 /* --- Translator --- */
@@ -210,8 +217,7 @@ document.getElementById("btnProfit").onclick=()=>{
   let y=parseFloat(document.getElementById("yield").value||0);
   let r=cropDB.find(x=>x[0]==crop);
   if(r){
-    let price=r[5]; // Rs per quintal
-    let profit=y*price;
+    let price=r[5]; let profit=y*price;
     document.getElementById("lblProfit").innerText=`Profit for ${crop}: ₹${profit.toLocaleString()}`;
   }
 };
