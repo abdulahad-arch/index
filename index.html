@@ -5,56 +5,45 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Smart AgriAdvisor</title>
 <style>
-  body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:0;background:#f7f7f7;color:#222}
-  header{background:#2b6cb0;color:white;padding:18px 14px;text-align:center;font-size:20px;font-weight:700}
-  .container{padding:14px;max-width:720px;margin:0 auto}
-  .card{background:white;padding:12px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.08);margin-bottom:12px}
-  label{display:block;font-weight:600;margin-bottom:6px}
-  .row{display:flex;gap:8px;flex-wrap:wrap}
-  button{background:#2b6cb0;color:white;border:none;padding:10px 12px;border-radius:6px;cursor:pointer}
-  button.secondary{background:#38a169}
+  body{font-family:Arial,Helvetica,sans-serif;background:#f7f7f7;margin:0;padding:0;color:#222}
+  header{background:#2b6cb0;color:#fff;padding:15px;text-align:center;font-size:20px;font-weight:700}
+  .container{padding:15px;max-width:720px;margin:0 auto}
+  .card{background:#fff;padding:12px;margin-bottom:12px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1)}
+  label{display:block;margin-bottom:6px;font-weight:600}
+  button{padding:10px;border:none;border-radius:6px;background:#2b6cb0;color:white;cursor:pointer;margin:5px}
   button.gray{background:#718096}
+  .row{display:flex;gap:6px;flex-wrap:wrap}
   select,input{padding:8px;border:1px solid #ddd;border-radius:6px;width:100%}
-  .result{color:#c53030;font-weight:700;margin-top:8px}
-  .small{font-size:13px;color:#666}
-  pre {background:#0f1724;color:#e6eef8;padding:8px;border-radius:6px;overflow:auto}
+  .result{margin-top:8px;color:#c53030;font-weight:700}
+  pre{background:#222;color:#eee;padding:8px;border-radius:6px;overflow:auto}
 </style>
 </head>
 <body>
 <header>Smart AgriAdvisor</header>
 <div class="container">
 
-  <!-- Wi-Fi -->
+  <!-- Connection -->
   <div class="card">
-    <label>ESP32 Wi-Fi</label>
+    <label>ESP32 Connection</label>
     <div class="row">
-      <input id="espIp" value="192.168.4.1"/>
-      <button id="btnConnect">Connect</button>
+      <input id="espIp" value="192.168.4.1"/> <!-- default ESP32 AP IP -->
+      <button id="btnConnect">🌐 Connect WiFi</button>
       <button id="btnDisconnect" class="gray">Disconnect</button>
+      <button id="btnBT">🔵 Connect Bluetooth</button>
     </div>
-    <span id="loadMsg" class="small"></span>
+    <div id="status">Not Connected</div>
   </div>
 
-  <!-- Soil -->
+  <!-- Soil Readings -->
   <div class="card">
     <label>Soil Readings</label>
     <div id="lblPH">pH: --</div>
     <div id="lblMoist">Moisture: --</div>
     <div id="lblTemp">Temp: --</div>
     <div class="row">
-      <button id="btnTakeReading">Take Soil Reading</button>
-      <button id="btnRefresh" class="secondary">Refresh</button>
+      <button id="btnTakeReading">Take Reading</button>
+      <button id="btnRefresh" class="gray">Refresh</button>
     </div>
-    <div id="logArea" class="small"></div>
-  </div>
-
-  <!-- Crops -->
-  <div class="card">
-    <label>Crop Selection</label>
-    <select id="cropSelect"></select>
-    <button id="btnCheck">Check Suitability</button>
-    <button id="btnAI" class="secondary">AI Suggest</button>
-    <div id="lblResult" class="result"></div>
   </div>
 
   <!-- Robot Controls -->
@@ -71,161 +60,109 @@
     </div>
   </div>
 
-  <!-- Translator -->
-  <div class="card">
-    <label>Translator</label>
-    <input id="txtTranslate" placeholder="Enter text"/>
-    <select id="langSelect">
-      <option value="hi">Hindi</option>
-      <option value="te">Telugu</option>
-    </select>
-    <button id="btnTranslate">Translate</button>
-    <div id="lblTranslation"></div>
-  </div>
-
-  <!-- Weather -->
-  <div class="card">
-    <label>Weather Advisory</label>
-    <input id="city" placeholder="Enter city"/>
-    <button id="btnWeather">Check Weather</button>
-    <div id="lblWeather"></div>
-  </div>
-
-  <!-- Profit Estimator -->
-  <div class="card">
-    <label>Profit Estimator</label>
-    <input id="yield" placeholder="Yield in quintals"/>
-    <button id="btnProfit">Estimate Profit</button>
-    <div id="lblProfit"></div>
-  </div>
-
   <!-- Debug -->
   <div class="card">
     <label>Debug</label>
     <pre id="debug">No data yet</pre>
   </div>
-
 </div>
 
 <script>
-/* --- Crops DB (50 crops with price Rs/quintal) --- */
-let cropDB=[
-  ["Wheat",6,7.5,40,15,2000],["Rice",5.5,7,60,20,1800],["Maize",5.5,7,50,18,1500],
-  ["Cotton",6,8,50,22,5000],["Potato",5.5,7,30,15,1200],["Tomato",5.5,7,30,20,1500],
-  ["Onion",6,7,35,18,1400],["Sugarcane",6,8,60,21,3000],["Soybean",6,7.5,40,20,2500],
-  ["Peanut",5.5,7,35,22,3000],["Sunflower",6,7.5,30,18,3200],["Barley",6,7.5,35,15,1600],
-  ["Oats",5,7.5,35,15,1800],["Millet",5,7.5,30,20,1400],["Sorghum",5.5,7.5,35,22,1600],
-  ["Chickpea",6,8,30,18,4000],["Lentil",6,8,30,16,4500],["Pea",6,7.5,35,15,2800],
-  ["Mustard",5.5,7.5,30,18,5000],["Groundnut",5.5,7.5,35,22,3500],["Sesame",5.5,7.5,30,20,6000],
-  ["Castor",5.5,7.5,30,20,4000],["Jute",6,7.5,50,20,2500],["Tea",4.5,6,60,18,12000],
-  ["Coffee",5,6.5,60,20,15000],["Banana",5.5,7.5,50,22,1000],["Mango",5.5,7.5,30,25,3000],
-  ["Apple",6,7,40,15,5000],["Orange",5.5,6.5,40,20,4000],["Grapes",6,7.5,35,20,4500],
-  ["Papaya",6,7.5,40,22,2000],["Guava",5,7.5,35,20,2500],["Pineapple",4.5,6.5,50,22,3000],
-  ["Pomegranate",5.5,7.5,35,20,5000],["Cabbage",6,7.5,40,15,1200],["Cauliflower",6,7.5,40,15,1400],
-  ["Carrot",6,7,35,15,2000],["Spinach",6,7.5,35,15,1000],["Cucumber",5.5,7.5,40,18,1500],
-  ["Chilli",5.5,7.5,40,20,6000],["Brinjal",5.5,7.5,40,20,2000],["Okra",6,7.5,40,20,2500],
-  ["Pumpkin",6,7.5,40,18,1500],["Melon",5.5,7.5,35,20,2000],["Watermelon",5.5,7.5,35,22,1800],
-  ["Strawberry",5.5,7,40,18,8000],["Pear",6,7,35,15,3500],["Plum",6,7.5,35,15,3000]
-];
-let phVal=0, moistVal=0, tempVal=0;
+let espUrl = "";
+let connected = false;
+let useBT = false;
 
-/* --- Wi-Fi --- */
-let espUrl="", espConnected=false;
-function setStatus(t){document.getElementById('loadMsg').innerText=t;}
+// --- Bluetooth vars ---
+let btDevice, btServer, txChar, rxChar;
+const SERVICE_UUID = "12345678-1234-5678-1234-56789abcdef0"; // replace with your UUID
+const TX_CHAR_UUID = "12345678-1234-5678-1234-56789abcdef1"; // ESP32 Notify
+const RX_CHAR_UUID = "12345678-1234-5678-1234-56789abcdef2"; // ESP32 Write
 
-document.getElementById("btnConnect").onclick=async()=>{
-  espUrl="http://"+document.getElementById("espIp").value;
-  try{
-    let r=await fetch(espUrl+"/");
-    if(r.ok){espConnected=true;alert("✅ ESP32 Connected!");setStatus("Connected to "+espUrl);}
-    else{throw new Error("Not OK");}
-  }catch(e){espConnected=false;alert("❌ ESP32 Not Connected");setStatus("Failed to connect");}
+function setStatus(msg){ document.getElementById("status").innerText = msg; }
+
+/* ---------------- WiFi ---------------- */
+document.getElementById("btnConnect").onclick = ()=>{
+  let ip = document.getElementById("espIp").value.trim();
+  if(!ip){ alert("Enter ESP32 IP!"); return; }
+  espUrl = "http://" + ip;
+  connected = true; useBT = false;
+  setStatus("✅ WiFi Connected: " + espUrl);
 };
 
-document.getElementById("btnDisconnect").onclick=()=>{espConnected=false;setStatus("Disconnected");};
+document.getElementById("btnDisconnect").onclick = ()=>{
+  connected = false; useBT = false;
+  espUrl = "";
+  setStatus("❌ Disconnected");
+};
 
 async function callEsp(path){
-  if(!espConnected)return;
+  if(!connected){ alert("Not connected!"); return; }
   try{
-    const r=await fetch(espUrl+path);
-    const txt=await r.text();
-    document.getElementById("debug").innerText=txt;
-    return txt;
-  }catch(e){document.getElementById("debug").innerText="Error: "+e;}
-}
-
-/* --- Soil --- */
-async function readSoil(){
-  let txt=await callEsp("/readSensors");
-  if(txt){
-    let n=txt.match(/-?\d+(\.\d+)?/g);
-    if(n){
-      phVal=parseFloat(n[0]);
-      moistVal=parseFloat(n[1]);
-      tempVal=parseFloat(n[2]);
+    if(useBT){
+      // send command via Bluetooth
+      let encoder = new TextEncoder();
+      await rxChar.writeValue(encoder.encode(path));
+      return "Sent via BT: " + path;
+    }else{
+      let res = await fetch(espUrl + path);
+      let txt = await res.text();
+      document.getElementById("debug").innerText = txt;
+      return txt;
     }
-    document.getElementById("lblPH").innerText="pH: "+phVal;
-    document.getElementById("lblMoist").innerText="Moisture: "+moistVal;
-    document.getElementById("lblTemp").innerText="Temp: "+tempVal;
-    let logs=JSON.parse(localStorage.getItem("soilLogs")||"[]");
-    logs.push({ph:phVal,moist:moistVal,temp:tempVal,time:new Date().toLocaleString()});
-    localStorage.setItem("soilLogs",JSON.stringify(logs));
-    document.getElementById("logArea").innerText="Last 3 logs:\n"+
-      logs.slice(-3).map(l=>`${l.time} → pH:${l.ph}, M:${l.moist}, T:${l.temp}`).join("\n");
+  }catch(e){
+    document.getElementById("debug").innerText = "Error: " + e;
   }
 }
-document.getElementById("btnTakeReading").onclick=readSoil;
-document.getElementById("btnRefresh").onclick=readSoil;
 
-/* --- Crops --- */
-function populate(){let s=document.getElementById("cropSelect");cropDB.forEach(r=>{let o=document.createElement("option");o.value=r[0];o.text=r[0];s.appendChild(o);});}
-populate();
-document.getElementById("btnCheck").onclick=()=>{
-  let crop=document.getElementById("cropSelect").value;
-  let r=cropDB.find(x=>x[0]==crop);
-  if(r){let ok=phVal>=r[1]&&phVal<=r[2]&&moistVal>=r[3]&&tempVal>=r[4];
-    document.getElementById("lblResult").innerText=ok?"✅ Suitable":"❌ Not Suitable";}
+/* ---------------- Bluetooth ---------------- */
+document.getElementById("btnBT").onclick = async()=>{
+  try{
+    btDevice = await navigator.bluetooth.requestDevice({
+      filters:[{namePrefix:"ESP32"}],
+      optionalServices:[SERVICE_UUID]
+    });
+    btServer = await btDevice.gatt.connect();
+    let service = await btServer.getPrimaryService(SERVICE_UUID);
+    txChar = await service.getCharacteristic(TX_CHAR_UUID);
+    rxChar = await service.getCharacteristic(RX_CHAR_UUID);
+
+    // enable notifications
+    await txChar.startNotifications();
+    txChar.addEventListener("characteristicvaluechanged", e=>{
+      let val = new TextDecoder().decode(e.target.value);
+      document.getElementById("debug").innerText = "BT RX: " + val;
+      if(val.includes("pH")) updateSensors(val);
+    });
+
+    connected = true; useBT = true;
+    setStatus("✅ Bluetooth Connected to ESP32");
+  }catch(e){
+    setStatus("❌ BT Error: " + e);
+  }
 };
-document.getElementById("btnAI").onclick=()=>{
-  let list=cropDB.filter(r=>phVal>=r[1]&&phVal<=r[2]&&moistVal>=r[3]&&tempVal>=r[4]);
-  document.getElementById("lblResult").innerText=list.length? "AI Suggests: "+list.map(x=>x[0]).join(", "):"No suitable crop";
+
+/* --- Soil Readings --- */
+function updateSensors(txt){
+  let nums = txt.match(/-?\d+(\.\d+)?/g);
+  if(nums && nums.length>=3){
+    document.getElementById("lblPH").innerText = "pH: " + nums[0];
+    document.getElementById("lblMoist").innerText = "Moisture: " + nums[1] + "%";
+    document.getElementById("lblTemp").innerText = "Temp: " + nums[2] + "°C";
+  }
+}
+document.getElementById("btnTakeReading").onclick = async()=>{
+  let txt = await callEsp("/readSensors");
+  if(txt && !useBT) updateSensors(txt);
+};
+document.getElementById("btnRefresh").onclick = async()=>{
+  let txt = await callEsp("/readSensors");
+  if(txt && !useBT) updateSensors(txt);
 };
 
 /* --- Robot Controls --- */
-document.querySelectorAll("button[data-act]").forEach(b=>{
-  b.onclick=()=>callEsp("/"+b.dataset.act);
+document.querySelectorAll("button[data-act]").forEach(btn=>{
+  btn.onclick = ()=>{ callEsp("/" + btn.dataset.act); };
 });
-
-/* --- Translator --- */
-document.getElementById("btnTranslate").onclick=async()=>{
-  let txt=document.getElementById("txtTranslate").value;
-  let lang=document.getElementById("langSelect").value;
-  let url=`https://api.mymemory.translated.net/get?q=${encodeURIComponent(txt)}&langpair=en|${lang}`;
-  let r=await fetch(url); let j=await r.json();
-  document.getElementById("lblTranslation").innerText=j.responseData.translatedText;
-};
-
-/* --- Weather --- */
-document.getElementById("btnWeather").onclick=async()=>{
-  let city=document.getElementById("city").value;
-  if(!city)return;
-  try{
-    let r=await fetch(`https://wttr.in/${city}?format=%t+%h+%w`);
-    let t=await r.text();
-    document.getElementById("lblWeather").innerText="Weather: "+t+"\nAdvice: Irrigate only if humidity < 40%";
-  }catch(e){document.getElementById("lblWeather").innerText="Error: "+e;}
-};
-
-/* --- Profit Estimator --- */
-document.getElementById("btnProfit").onclick=()=>{
-  let crop=document.getElementById("cropSelect").value;
-  let y=parseFloat(document.getElementById("yield").value||0);
-  let r=cropDB.find(x=>x[0]==crop);
-  if(r){
-    let price=r[5]; let profit=y*price;
-    document.getElementById("lblProfit").innerText=`Profit for ${crop}: ₹${profit.toLocaleString()}`;
-  }
-};
 </script>
 </body>
 </html>
