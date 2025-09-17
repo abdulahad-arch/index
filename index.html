@@ -66,8 +66,8 @@
       <button data-act="stop">🛑 Stop</button>
       <button data-act="right">➡ Right</button>
       <button data-act="backward">⬇ Backward</button>
-      <button data-act="servoDip">⚙️ Dip Servo</button>
-      <button data-act="servoLift">⚙️ Lift Servo</button>
+      <button data-act="servoDip">⚙ Dip Servo</button>
+      <button data-act="servoLift">⚙ Lift Servo</button>
     </div>
   </div>
 
@@ -159,14 +159,19 @@ async function readSoil(){
   let txt=await callEsp("/readSensors");
   if(txt){
     let n=txt.match(/-?\d+(\.\d+)?/g);
-    if(n){phVal=n[0];moistVal=n[1];tempVal=n[2];}
+    if(n){
+      phVal=parseFloat(n[0]);
+      moistVal=parseFloat(n[1]);
+      tempVal=parseFloat(n[2]);
+    }
     document.getElementById("lblPH").innerText="pH: "+phVal;
     document.getElementById("lblMoist").innerText="Moisture: "+moistVal;
     document.getElementById("lblTemp").innerText="Temp: "+tempVal;
     let logs=JSON.parse(localStorage.getItem("soilLogs")||"[]");
     logs.push({ph:phVal,moist:moistVal,temp:tempVal,time:new Date().toLocaleString()});
     localStorage.setItem("soilLogs",JSON.stringify(logs));
-    document.getElementById("logArea").innerText="Last 3 logs:\n"+logs.slice(-3).map(l=>`${l.time} → pH:${l.ph}, M:${l.moist}, T:${l.temp}`).join("\n");
+    document.getElementById("logArea").innerText="Last 3 logs:\n"+
+      logs.slice(-3).map(l=>`${l.time} → pH:${l.ph}, M:${l.moist}, T:${l.temp}`).join("\n");
   }
 }
 document.getElementById("btnTakeReading").onclick=readSoil;
