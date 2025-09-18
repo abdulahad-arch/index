@@ -3,380 +3,435 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Smart AgriAdvisor — Web</title>
+<title>Smart AgriAdvisor — Soil & Crop Advisor</title>
 <style>
   body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:0;background:#f7f7f7;color:#222}
   header{background:#2b6cb0;color:#fff;padding:16px;text-align:center;font-size:20px;font-weight:700}
-  .container{padding:14px;max-width:920px;margin:12px auto}
+  .container{padding:14px;max-width:980px;margin:12px auto}
   .card{background:#fff;padding:12px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.06);margin-bottom:12px}
-  label{display:block;font-weight:700;margin-bottom:8px}
+  label{display:block;font-weight:700;margin-bottom:6px}
   .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   input,select,button,textarea{padding:8px;border-radius:6px;border:1px solid #ddd;font-size:14px}
-  input,select,textarea{flex:1}
   button{background:#2b6cb0;color:#fff;border:none;cursor:pointer}
   button.gray{background:#718096}
   button.small{padding:6px 8px;font-size:13px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
   .stat{font-weight:700;margin-top:6px}
   .result{color:#0b6b35;font-weight:700;margin-top:8px}
   pre{background:#0f1724;color:#e6eef8;padding:10px;border-radius:6px;overflow:auto;max-height:220px}
   .small{font-size:13px;color:#666}
-  .muted{color:#666;font-size:13px}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:6px;border:1px solid #eee;text-align:left;font-size:13px}
+  .badge{display:inline-block;padding:4px 8px;border-radius:12px;background:#f1f5f9;color:#0f1724;font-weight:700;font-size:12px}
+  .nut-low{color:#c53030;font-weight:700}
+  .nut-ok{color:#2f855a;font-weight:700}
+  .nut-high{color:#ed8936;font-weight:700}
 </style>
 </head>
 <body>
-<header>Smart AgriAdvisor — Web</header>
+<header data-i18n="title">Smart AgriAdvisor — Soil & Crop Advisor</header>
 <div class="container">
 
-  <!-- Connection -->
-  <div class="card">
-    <label>Connect to ESP32</label>
-    <div class="row">
-      <input id="espIp" value="192.168.4.1" placeholder="ESP32 IP (e.g. 192.168.4.1)"/>
-      <button id="btnConnect" class="small">Connect</button>
-      <button id="btnDisconnect" class="small gray">Disconnect</button>
-    </div>
-    <div id="connStatus" class="small muted">Status: Not connected</div>
-  </div>
-
-  <!-- Sensors + Actions -->
-  <div class="card">
-    <label>Soil & Environment</label>
+  <!-- Soil & Environment (manual entry) -->
+  <div class="card" id="soilCard">
+    <label data-i18n="soil_label">Soil & Environment (manual entry)</label>
     <div class="grid">
       <div>
-        <div class="stat">pH</div>
-        <div id="lblPH">--</div>
+        <label data-i18n="ph_label">pH</label>
+        <input id="inpPH" type="number" step="0.1" min="0" max="14" placeholder="e.g. 6.5" />
       </div>
       <div>
-        <div class="stat">Moisture (%)</div>
-        <div id="lblMoist">--</div>
+        <label data-i18n="moist_label">Moisture (%)</label>
+        <input id="inpMoist" type="number" step="1" min="0" max="100" placeholder="e.g. 45" />
       </div>
       <div>
-        <div class="stat">Temp (°C)</div>
-        <div id="lblTemp">--</div>
+        <label data-i18n="temp_label">Temperature (°C)</label>
+        <input id="inpTemp" type="number" step="0.1" placeholder="e.g. 28.5" />
       </div>
       <div>
-        <div class="stat">Humidity (%)</div>
-        <div id="lblHum">--</div>
-      </div>
-      <div>
-        <div class="stat">Obstacle (cm)</div>
-        <div id="lblDist">--</div>
+        <label data-i18n="hum_label">Humidity (%)</label>
+        <input id="inpHum" type="number" step="1" min="0" max="100" placeholder="e.g. 60" />
       </div>
     </div>
 
-    <div style="margin-top:10px" class="row">
-      <button id="btnRead" class="small">Take Soil Reading</button>
-      <button id="btnRefresh" class="small gray">Refresh</button>
-      <button id="btnShowLogs" class="small gray">Show Logs</button>
+    <div class="row" style="margin-top:10px">
+      <button id="btnSaveManual" class="small" data-i18n="save_manual">Save Values</button>
+      <button id="btnPredictNutrients" class="small gray" data-i18n="predict_nutrients">Predict Soil Nutrients</button>
+      <button id="btnRefreshSoil" class="small" data-i18n="refresh">Refresh</button>
     </div>
-    <div id="logArea" class="small muted" style="white-space:pre-wrap;margin-top:8px"></div>
+
+    <div id="nutrientResult" style="margin-top:10px"></div>
+    <div id="soilNotes" class="small" style="margin-top:8px;color:#374151"></div>
   </div>
 
-  <!-- Crop selection & AI -->
+  <!-- Crop Selection & AI -->
   <div class="card">
-    <label>Crop Suitability & AI Suggestion</label>
+    <label data-i18n="crop_label">Crop Selection & AI</label>
     <div class="row">
-      <select id="cropSelect"></select>
+      <select id="cropSelect" style="flex:1"></select>
       <button id="btnCheck" class="small">Check Suitability</button>
       <button id="btnAI" class="small gray">AI Suggest</button>
+      <button id="btnRefreshCrops" class="small">Refresh</button>
     </div>
     <div id="lblResult" class="result"></div>
-    <div id="aiList" class="muted" style="margin-top:8px"></div>
+    <div id="aiList" class="small" style="margin-top:6px"></div>
   </div>
 
-  <!-- Robot controls -->
+  <!-- Translator (single + whole-app) -->
   <div class="card">
-    <label>Robot Controls</label>
+    <label data-i18n="translator_label">Translator (single text or whole app)</label>
     <div class="row">
-      <button data-cmd="forward">⬆ Forward</button>
-      <button data-cmd="left">⬅ Left</button>
-      <button data-cmd="stop" class="gray">🛑 Stop</button>
-      <button data-cmd="right">➡ Right</button>
-      <button data-cmd="backward">⬇ Backward</button>
-      <button data-cmd="servoDip" class="small">⚙ Dip Servo</button>
-      <button data-cmd="servoLift" class="small gray">⚙ Lift Servo</button>
-    </div>
-    <div id="carStatus" class="small muted" style="margin-top:8px"></div>
-  </div>
-
-  <!-- Translator -->
-  <div class="card">
-    <label>Translator (Hindi / Telugu)</label>
-    <div class="row">
-      <input id="txtTranslate" placeholder="Type English text..."/>
+      <input id="txtTranslate" placeholder="Enter text to translate..." style="flex:1" />
       <select id="langSelect" style="width:160px">
+        <!-- some popular codes; MyMemory supports many -->
         <option value="hi">Hindi</option>
         <option value="te">Telugu</option>
+        <option value="bn">Bengali</option>
+        <option value="ta">Tamil</option>
+        <option value="kn">Kannada</option>
+        <option value="mr">Marathi</option>
+        <option value="gu">Gujarati</option>
+        <option value="pa">Punjabi</option>
+        <option value="ur">Urdu</option>
+        <option value="en">English</option>
+        <option value="es">Spanish</option>
+        <option value="fr">French</option>
+        <option value="ar">Arabic</option>
       </select>
       <button id="btnTranslate" class="small">Translate</button>
+      <button id="btnTranslateApp" class="small gray">Translate App</button>
     </div>
-    <div id="lblTranslation" class="small muted" style="margin-top:8px"></div>
+    <div id="lblTranslation" class="small" style="margin-top:8px"></div>
   </div>
 
   <!-- Weather -->
   <div class="card">
-    <label>Weather Advisory</label>
+    <label data-i18n="weather_label">Weather Advisory</label>
     <div class="row">
-      <input id="city" placeholder="City (or leave blank for local)"/>
+      <input id="city" placeholder="City (for quick advice)" style="flex:1"/>
       <button id="btnWeather" class="small">Check Weather</button>
     </div>
-    <div id="lblWeather" style="margin-top:8px" class="muted"></div>
+    <div id="lblWeather" class="small" style="margin-top:8px"></div>
   </div>
 
-  <!-- Profit Estimator -->
+  <!-- Profit -->
   <div class="card">
-    <label>Profit Estimator</label>
+    <label data-i18n="profit_label">Profit Estimator</label>
     <div class="row">
-      <select id="cropProfit"></select>
-      <input id="yieldInput" placeholder="Yield (quintals)"/>
+      <select id="cropProfit" style="flex:1"></select>
+      <input id="yieldInput" placeholder="Yield (quintals)" style="width:160px"/>
       <button id="btnProfit" class="small">Estimate</button>
     </div>
-    <div id="lblProfit" class="result"></div>
+    <div id="lblProfit" class="result" style="margin-top:8px"></div>
   </div>
 
   <!-- Debug -->
   <div class="card">
-    <label>Debug / Raw Response</label>
-    <pre id="debug">No data yet</pre>
+    <label data-i18n="debug_label">Debug / Raw</label>
+    <pre id="debug">No data</pre>
+  </div>
+
+  <div class="card small">
+    <strong>Important:</strong> nutrient prediction is a heuristic based on pH / moisture / temp. <br>
+    For accurate N/P/K/Ca/Fe/Zn measurements use lab testing or dedicated sensors.
   </div>
 
 </div>
 
 <script>
-/* ------------- Crop DB (50+ crops) -------------
-  Format: [ "Name", minPH, maxPH, minMoistPercent, minTempC, pricePerQuintal ]
-------------------------------------------------*/
+/* ---------- Crop DB (50 crops) ----------
+ Each entry: [name, minPH, maxPH, minMoistPercent, minTempC, minHumPercent, pricePerQuintal, nutrientDemand{N,P,K} ]
+ nutrientDemand: "High"/"Med"/"Low" for basic planning
+-----------------------------------------*/
 const cropDB = [
-  ["Wheat",6,7.5,40,15,2000],["Rice",5.5,7,60,20,1800],["Maize",5.5,7,50,18,1500],
-  ["Cotton",6,8,50,22,5000],["Potato",5.5,7,30,15,1200],["Tomato",5.5,7,30,20,1500],
-  ["Onion",6,7,35,18,1400],["Sugarcane",6,8,60,21,3000],["Soybean",6,7.5,40,20,2500],
-  ["Peanut",5.5,7,35,22,3000],["Sunflower",6,7.5,30,18,3200],["Barley",6,7.5,35,15,1600],
-  ["Oats",5,7.5,35,15,1800],["Millet",5,7.5,30,20,1400],["Sorghum",5.5,7.5,35,22,1600],
-  ["Chickpea",6,8,30,18,4000],["Lentil",6,8,30,16,4500],["Pea",6,7.5,35,15,2800],
-  ["Mustard",5.5,7.5,30,18,5000],["Groundnut",5.5,7.5,35,22,3500],["Sesame",5.5,7.5,30,20,6000],
-  ["Castor",5.5,7.5,30,20,4000],["Jute",6,7.5,50,20,2500],["Tea",4.5,6,60,18,12000],
-  ["Coffee",5,6.5,60,20,15000],["Banana",5.5,7.5,50,22,1000],["Mango",5.5,7.5,30,25,3000],
-  ["Apple",6,7,40,15,5000],["Orange",5.5,6.5,40,20,4000],["Grapes",6,7.5,35,20,4500],
-  ["Papaya",6,7.5,40,22,2000],["Guava",5,7.5,35,20,2500],["Pineapple",4.5,6.5,50,22,3000],
-  ["Pomegranate",5.5,7.5,35,20,5000],["Cabbage",6,7.5,40,15,1200],["Cauliflower",6,7.5,40,15,1400],
-  ["Carrot",6,7,35,15,2000],["Spinach",6,7.5,35,15,1000],["Cucumber",5.5,7.5,40,18,1500],
-  ["Chilli",5.5,7.5,40,20,6000],["Brinjal",5.5,7.5,40,20,2000],["Okra",6,7.5,40,20,2500],
-  ["Pumpkin",6,7.5,40,18,1500],["Melon",5.5,7.5,35,20,2000],["Watermelon",5.5,7.5,35,22,1800],
-  ["Strawberry",5.5,7,40,18,8000],["Pear",6,7,35,15,3500],["Plum",6,7.5,35,15,3000]
+["Wheat",6,7.5,40,10,40,2000, {N:"High", P:"Med", K:"Med"}],
+["Rice",5.5,7,60,20,60,1800, {N:"High", P:"High", K:"Med"}],
+["Maize",5.5,7,50,18,50,1500, {N:"High", P:"Med", K:"High"}],
+["Cotton",6,8,50,21,50,5000, {N:"Med", P:"Med", K:"High"}],
+["Potato",5.5,6.5,60,15,60,1200, {N:"Med", P:"High", K:"High"}],
+["Tomato",5.5,7.5,50,18,60,1500, {N:"High", P:"High", K:"Med"}],
+["Onion",6,7,35,15,55,1400, {N:"Med", P:"Med", K:"Med"}],
+["Sugarcane",6,8,60,21,60,3000, {N:"High", P:"Med", K:"High"}],
+["Soybean",6,7.5,40,20,55,2500, {N:"Low", P:"Med", K:"Med"}],
+["Peanut",5.5,7,35,22,50,3000, {N:"Med", P:"High", K:"Med"}],
+["Sunflower",6,7.5,30,18,40,3200, {N:"Med", P:"Med", K:"High"}],
+["Barley",6,7.5,35,15,40,1600, {N:"Med", P:"Low", K:"Med"}],
+["Oats",5,7.5,35,12,40,1800, {N:"Med", P:"Low", K:"Low"}],
+["Millet",5,7.5,30,20,35,1400, {N:"Low", P:"Low", K:"Med"}],
+["Sorghum",5.5,7.5,35,22,35,1600, {N:"Low", P:"Low", K:"Med"}],
+["Chickpea",6,8,30,18,40,4000, {N:"Low", P:"Med", K:"Low"}],
+["Lentil",6,8,30,16,40,4500, {N:"Low", P:"Med", K:"Low"}],
+["Pea",6,7.5,35,15,60,2800, {N:"Low", P:"Med", K:"Low"}],
+["Mustard",5.5,7.5,30,18,50,5000, {N:"Med", P:"Med", K:"Low"}],
+["Groundnut",5.5,7.5,35,22,55,3500, {N:"Med", P:"High", K:"Med"}],
+["Sesame",5.5,7.5,30,20,40,6000, {N:"Low", P:"Low", K:"Med"}],
+["Castor",5.5,7.5,30,20,40,4000, {N:"Low", P:"Low", K:"Low"}],
+["Jute",6,7.5,50,20,70,2500, {N:"High", P:"Med", K:"Low"}],
+["Tea",4.5,6,60,18,80,12000, {N:"Med", P:"Low", K:"Low"}],
+["Coffee",5,6.5,60,20,70,15000, {N:"Med", P:"Low", K:"Low"}],
+["Banana",5.5,7.5,50,22,70,1000, {N:"High", P:"Med", K:"High"}],
+["Mango",5.5,7.5,30,25,60,3000, {N:"Low", P:"Low", K:"Med"}],
+["Apple",6,7,40,10,60,5000, {N:"Med", P:"Med", K:"Low"}],
+["Orange",5.5,6.5,40,20,60,4000, {N:"Med", P:"Med", K:"Low"}],
+["Grapes",6,7.5,35,20,60,4500, {N:"Med", P:"Med", K:"Med"}],
+["Papaya",6,7.5,40,22,65,2000, {N:"High", P:"Med", K:"High"}],
+["Guava",5,7.5,35,20,60,2500, {N:"Med", P:"Med", K:"Med"}],
+["Pineapple",4.5,6.5,50,22,70,3000, {N:"Low", P:"Low", K:"Med"}],
+["Pomegranate",5.5,7.5,35,20,50,5000, {N:"Low", P:"Low", K:"Low"}],
+["Cabbage",6,7.5,40,15,80,1200, {N:"High", P:"Med", K:"Med"}],
+["Cauliflower",6,7.5,40,15,80,1400, {N:"High", P:"Med", K:"Med"}],
+["Carrot",6,7,35,15,65,2000, {N:"Med", P:"Low", K:"Low"}],
+["Spinach",6,7.5,35,15,70,1000, {N:"High", P:"Med", K:"Low"}],
+["Cucumber",5.5,7.5,40,18,70,1500, {N:"High", P:"Med", K:"Med"}],
+["Chilli",5.5,7.5,40,20,60,6000, {N:"High", P:"Med", K:"High"}],
+["Brinjal",5.5,7.5,40,20,60,2000, {N:"High", P:"Med", K:"Med"}],
+["Okra",6,7.5,40,20,60,2500, {N:"Med", P:"Low", K:"Med"}],
+["Pumpkin",6,7.5,40,18,60,1500, {N:"Med", P:"Low", K:"High"}],
+["Melon",5.5,7.5,35,20,60,2000, {N:"Low", P:"Low", K:"Med"}],
+["Watermelon",5.5,7.5,35,22,60,1800, {N:"Low", P:"Low", K:"Med"}],
+["Strawberry",5.5,7,40,18,70,8000, {N:"High", P:"High", K:"Med"}],
+["Pear",6,7,35,15,60,3500, {N:"Med", P:"Low", K:"Low"}],
+["Plum",6,7.5,35,15,60,3000, {N:"Med", P:"Low", K:"Low"}]
 ];
 
-/* ------------- App state ------------- */
-let espUrl = "";
-let connected = false;
-let phVal = null, moistVal = null, tempVal = null, humVal = null, distVal = null;
+/* ---------- UI Elements ---------- */
+const inpPH = document.getElementById('inpPH');
+const inpMoist = document.getElementById('inpMoist');
+const inpTemp = document.getElementById('inpTemp');
+const inpHum = document.getElementById('inpHum');
+const btnSaveManual = document.getElementById('btnSaveManual');
+const btnPredict = document.getElementById('btnPredictNutrients');
+const btnRefreshSoil = document.getElementById('btnRefreshSoil');
+const nutrientResult = document.getElementById('nutrientResult');
+const soilNotes = document.getElementById('soilNotes');
+const debug = document.getElementById('debug');
 
-/* init crop selects */
+const cropSelect = document.getElementById('cropSelect');
+const cropProfit = document.getElementById('cropProfit');
+const btnCheck = document.getElementById('btnCheck');
+const btnAI = document.getElementById('btnAI');
+const lblResult = document.getElementById('lblResult');
+const aiList = document.getElementById('aiList');
+const btnRefreshCrops = document.getElementById('btnRefreshCrops');
+
+const btnTranslate = document.getElementById('btnTranslate');
+const btnTranslateApp = document.getElementById('btnTranslateApp');
+const txtTranslate = document.getElementById('txtTranslate');
+const langSelect = document.getElementById('langSelect');
+const lblTranslation = document.getElementById('lblTranslation');
+
+const btnWeather = document.getElementById('btnWeather');
+const lblWeather = document.getElementById('lblWeather');
+
+const btnProfit = document.getElementById('btnProfit');
+const yieldInput = document.getElementById('yieldInput');
+const lblProfit = document.getElementById('lblProfit');
+
+/* ---------- App state ---------- */
+let phVal = null, moistVal = null, tempVal = null, humVal = null;
+let nutrients = null; // will be object: {N:'Low'/'OK'/'High', P:..., K:..., Ca:..., Fe:..., Zn:...}
+
+/* ---------- Helpers ---------- */
+function setDebug(t){ debug.innerText = t; }
+function clampNum(v, min, max){ return Math.max(min, Math.min(max, v)); }
+
+/* ---------- Populate crop selects ---------- */
 function populateCrops(){
-  const sel = document.getElementById('cropSelect');
-  const sel2 = document.getElementById('cropProfit');
-  sel.innerHTML = '';
-  sel2.innerHTML = '';
-  cropDB.forEach(r=>{
-    const o = document.createElement('option');
-    o.value = r[0]; o.text = r[0];
-    sel.appendChild(o);
-    const o2 = document.createElement('option');
-    o2.value = r[0]; o2.text = r[0];
-    sel2.appendChild(o2);
-  });
+  cropSelect.innerHTML = '';
+  cropProfit.innerHTML = '';
+  for(const c of cropDB){
+    let opt=document.createElement('option'); opt.value=c[0]; opt.text=c[0]; cropSelect.appendChild(opt);
+    let opt2=document.createElement('option'); opt2.value=c[0]; opt2.text=c[0]; cropProfit.appendChild(opt2);
+  }
 }
 populateCrops();
 
-/* ------------- Helpers ------------- */
-function setConnStatus(txt){
-  document.getElementById('connStatus').innerText = 'Status: ' + txt;
-}
-function setDebug(txt){
-  document.getElementById('debug').innerText = txt;
+/* ---------- Manual save ---------- */
+btnSaveManual.onclick = ()=>{
+  const ph = parseFloat(inpPH.value);
+  const mo = parseFloat(inpMoist.value);
+  const te = parseFloat(inpTemp.value);
+  const hu = parseFloat(inpHum.value);
+  if(isNaN(ph) || isNaN(mo) || isNaN(te) || isNaN(hu)){ alert("Enter all values (pH, moisture, temp, humidity)"); return; }
+  phVal = clampNum(ph,0,14);
+  moistVal = clampNum(mo,0,100);
+  tempVal = te;
+  humVal = clampNum(hu,0,100);
+  setDebug(`Saved manual soil values → pH:${phVal} Moist:${moistVal}% Temp:${tempVal}C Hum:${humVal}%`);
+  nutrientResult.innerHTML = '';
+  soilNotes.innerText = 'Manual values saved — now Predict Nutrients or Check Crops.';
+};
+
+/* ---------- Refresh Soil (recalculate) ---------- */
+btnRefreshSoil.onclick = ()=>{
+  if(phVal===null){ alert('No saved soil values. Enter them and Save Values first.'); return; }
+  nutrients = predictNutrients(phVal, moistVal, tempVal, humVal);
+  renderNutrients(nutrients);
+};
+
+/* ---------- Predict nutrients — heuristic ---------- */
+/* This is a rule-based estimation: NOT a lab measurement.
+   Rules (simplified):
+   - pH affects availability: very low pH (<5.5) => P low availability, Ca low, Mo low, Fe/Mn/Zn more soluble (may be high)
+   - pH very high (>7.8) => Fe/Mn/Zn less available, Ca/Mg more present, P may precipitate => P low availability
+   - Moisture: very low moisture reduces N mineralization => N availability low; saturated/wet may reduce O2 and reduce N availability (but increase denitrification)
+   - Temperature influences biological activity (low temp -> lower N mineralization)
+   We'll combine these into simple Low/OK/High flags per nutrient.
+*/
+function predictNutrients(ph, moist, temp, hum){
+  // sanitize
+  ph = clampNum(ph,0,14);
+  moist = clampNum(moist,0,100);
+  temp = temp || 25;
+  hum = hum || 50;
+
+  const out = { N:'OK', P:'OK', K:'OK', Ca:'OK', Fe:'OK', Zn:'OK' };
+
+  // Nitrogen (N)
+  // if moisture <30 or temp <12 -> N mineralization low
+  if(moist < 30 || temp < 12) out.N = 'Low';
+  else if(moist > 85) out.N = 'Low'; // too waterlogged -> denitrification
+  else out.N = 'OK';
+
+  // Phosphorus (P)
+  if(ph < 5.5 || ph > 7.8) out.P = 'Low';
+  else out.P = 'OK';
+
+  // Potassium (K)
+  // K availability less tied to pH; extreme leaching (very high moisture) => K low
+  if(moist > 80) out.K = 'Low';
+  else out.K = 'OK';
+
+  // Calcium (Ca)
+  if(ph < 5.5) out.Ca = 'Low';
+  else if(ph > 8.0) out.Ca = 'High';
+  else out.Ca = 'OK';
+
+  // Iron (Fe)
+  if(ph < 6.0) out.Fe = 'High'; // acidic soils make Fe more available (but risk toxicity)
+  else if(ph > 7.5) out.Fe = 'Low';
+  else out.Fe = 'OK';
+
+  // Zinc (Zn) similar to Fe
+  if(ph < 5.5) out.Zn = 'High';
+  else if(ph > 7.5) out.Zn = 'Low';
+  else out.Zn = 'OK';
+
+  return out;
 }
 
-/* ------------- Connect / Disconnect ------------- */
-document.getElementById('btnConnect').onclick = async () => {
-  const ip = document.getElementById('espIp').value.trim();
-  if(!ip){ alert('Enter ESP32 IP'); return; }
-  espUrl = (ip.startsWith('http')? ip : ('http://'+ip));
-  try {
-    const r = await fetch(espUrl + '/');
-    const text = await r.text();
-    setDebug(text);
-    connected = true;
-    setConnStatus('Connected to ' + espUrl);
-    alert('✅ Connected to ESP32');
-  } catch(e){
-    connected = false;
-    setConnStatus('Failed to connect');
-    setDebug('Error: ' + e);
-    alert('❌ Unable to connect to ESP32. Make sure your phone is connected to ESP32 Wi-Fi (or same router).');
+/* ---------- Render nutrients results ---------- */
+function renderNutrients(n){
+  if(!n) return;
+  let html = `<strong>Predicted nutrient availability</strong><br><table><tr><th>Nutrient</th><th>Availability</th><th>Suggestion</th></tr>`;
+  function sugFor(k,v){
+    if(v==='OK') return '—';
+    if(k==='N' && v==='Low') return 'Apply nitrogen fertilizer (urea/organic manure).';
+    if(k==='P' && v==='Low') return 'Apply rock phosphate / single superphosphate; consider liming if pH too low.';
+    if(k==='K' && v==='Low') return 'Apply muriate of potash (KCl) or potash-rich organic fertilizer.';
+    if(k==='Ca' && v==='Low') return 'Apply agricultural lime (calcium carbonate) or gypsum as per soil test.';
+    if(k==='Fe' && v==='Low') return 'Fe chelate foliar feed or soil application; check pH (raise acidity).';
+    if(k==='Zn' && v==='Low') return 'Apply zinc sulfate soil application or foliar spray.';
+    if(v==='High') return 'Monitor — may cause imbalance; consider crop choice / pH correction.';
+    return 'Check lab test.';
   }
+  html += `<tr><td>N</td><td class="${n.N==='Low'?'nut-low':n.N==='High'?'nut-high':'nut-ok'}">${n.N}</td><td>${sugFor('N', n.N)}</td></tr>`;
+  html += `<tr><td>P</td><td class="${n.P==='Low'?'nut-low':n.P==='High'?'nut-high':'nut-ok'}">${n.P}</td><td>${sugFor('P', n.P)}</td></tr>`;
+  html += `<tr><td>K</td><td class="${n.K==='Low'?'nut-low':n.K==='High'?'nut-high':'nut-ok'}">${n.K}</td><td>${sugFor('K', n.K)}</td></tr>`;
+  html += `<tr><td>Ca</td><td class="${n.Ca==='Low'?'nut-low':n.Ca==='High'?'nut-high':'nut-ok'}">${n.Ca}</td><td>${sugFor('Ca', n.Ca)}</td></tr>`;
+  html += `<tr><td>Fe</td><td class="${n.Fe==='Low'?'nut-low':n.Fe==='High'?'nut-high':'nut-ok'}">${n.Fe}</td><td>${sugFor('Fe', n.Fe)}</td></tr>`;
+  html += `<tr><td>Zn</td><td class="${n.Zn==='Low'?'nut-low':n.Zn==='High'?'nut-high':'nut-ok'}">${n.Zn}</td><td>${sugFor('Zn', n.Zn)}</td></tr>`;
+  html += `</table>`;
+  nutrientResult.innerHTML = html;
+  soilNotes.innerText = 'Note: This is an estimation. For precise nutrient levels use a laboratory soil test or dedicated sensors.';
+  setDebug('Nutrient prediction generated at ' + new Date().toLocaleString());
+}
+
+/* ---------- Button: Predict nutrients ---------- */
+btnPredict.onclick = ()=>{
+  if(phVal===null){
+    alert('No soil values saved. Enter values and Save Values first.');
+    return;
+  }
+  nutrients = predictNutrients(phVal, moistVal, tempVal, humVal);
+  renderNutrients(nutrients);
 };
 
-document.getElementById('btnDisconnect').onclick = () => {
-  connected = false;
-  espUrl = '';
-  setConnStatus('Disconnected');
-  setDebug('Disconnected');
+/* ---------- Suitability check ---------- */
+btnCheck.onclick = ()=>{
+  const cropName = cropSelect.value;
+  const crop = cropDB.find(c=>c[0]===cropName);
+  if(!crop){ alert('Choose crop'); return; }
+  if(phVal===null){ alert('No soil values saved. Enter them and Save Values first.'); return; }
+
+  const [name, minPH, maxPH, minMoist, minTemp, minHum] = [crop[0], crop[1], crop[2], crop[3], crop[4], crop[5]];
+  const okPH = phVal >= minPH && phVal <= maxPH;
+  const okMoist = moistVal >= minMoist;
+  const okTemp = tempVal >= minTemp;
+  const okHum = humVal >= minHum;
+
+  let text = '';
+  if(okPH && okMoist && okTemp && okHum){
+    text += `✅ ${name} — Basic environment suitable.`;
+  } else {
+    text += `❌ ${name} — Not suitable. Issues: `;
+    const issues = [];
+    if(!okPH) issues.push(`pH (${phVal} not in ${minPH}-${maxPH})`);
+    if(!okMoist) issues.push(`Moisture (${moistVal}% < ${minMoist}%)`);
+    if(!okTemp) issues.push(`Temp (${tempVal}°C < ${minTemp}°C)`);
+    if(!okHum) issues.push(`Humidity (${humVal}% < ${minHum}%)`);
+    text += issues.join(', ');
+  }
+
+  // nutrients check
+  if(!nutrients) nutrients = predictNutrients(phVal, moistVal, tempVal, humVal);
+  // check crop nutrient demand: if crop needs High nutrient and predicted availability is Low => warn
+  const demand = crop[7];
+  const nutIssues = [];
+  ['N','P','K'].forEach(k=>{
+    const need = demand[k]; // "High","Med","Low"
+    const avail = nutrients[k];
+    if(need === 'High' && avail === 'Low') nutIssues.push(`${k} LOW (add fertilizer)`);
+  });
+  if(nutIssues.length) text += `\n⚠ Nutrient advice: ${nutIssues.join('; ')}`;
+
+  lblResult.innerText = text;
+  setDebug('Suitability check for ' + name + ' done.');
 };
 
-/* ------------- Read Sensors ------------- */
-async function fetchSensors(){
-  if(!connected){ alert('Connect to ESP32 first'); return; }
-  try{
-    const r = await fetch(espUrl + '/readSensors');
-    const text = await r.text();
-    setDebug(text);
-    // server sends JSON in your sketch, attempt parse
-    try {
-      const j = JSON.parse(text);
-      phVal = parseFloat(j.pH); moistVal = parseFloat(j.Moist); tempVal = parseFloat(j.Temp); humVal = parseFloat(j.Hum); distVal = parseFloat(j.DistanceCM);
-    } catch(err){
-      // try to parse numbers from free text format "pH:6.5, Moist:45.0, Temp:28.3"
-      const nums = text.match(/-?\d+(\.\d+)?/g);
-      if(nums && nums.length>=3){
-        phVal = parseFloat(nums[0]); moistVal = parseFloat(nums[1]); tempVal = parseFloat(nums[2]);
-        // humidity/distance may not be present in older endpoint
-        humVal = nums[3]?parseFloat(nums[3]):humVal;
-        distVal = nums[4]?parseFloat(nums[4]):distVal;
-      } else {
-        throw new Error('No numeric data found');
-      }
+/* ---------- AI Suggest ---------- */
+btnAI.onclick = ()=>{
+  if(phVal===null){ alert('Save soil values first.'); return; }
+  // score crops: +2 for PH in range, +1 for moist >= minMoist, +1 for temp >= minTemp, +1 for hum >= minHum
+  const scored = cropDB.map(c=>{
+    let score = 0;
+    if(phVal >= c[1] && phVal <= c[2]) score += 2;
+    if(moistVal >= c[3]) score += 1;
+    if(tempVal >= c[4]) score += 1;
+    if(humVal >= c[5]) score += 1;
+    // nutrient compatibility: if crop needs High N and predicted N low => -2 penalty
+    if(nutrients) {
+      const needN = c[7].N;
+      if(needN === 'High' && nutrients.N === 'Low') score -= 2;
     }
+    return { name: c[0], score };
+  });
+  scored.sort((a,b)=>b.score - a.score);
+  const top = scored.slice(0,6).filter(x=>x.score>0).map(x=>x.name);
+  aiList.innerText = top.length ? 'AI Suggests: ' + top.join(', ') : 'No good matches — consider improving soil or selecting different crops.';
+};
 
-    // update UI
-    document.getElementById('lblPH').innerText = phVal!==null? phVal : '--';
-    document.getElementById('lblMoist').innerText = moistVal!==null? moistVal+' %' : '--';
-    document.getElementById('lblTemp').innerText = tempVal!==null? tempVal + ' °C' : '--';
-    document.getElementById('lblHum').innerText = humVal!==null? humVal+' %' : '--';
-    document.getElementById('lblDist').innerText = distVal!==null? distVal + ' cm' : '--';
-
-    // save log
-    let logs = JSON.parse(localStorage.getItem('soilLogs')||'[]');
-    logs.push({time:new Date().toLocaleString(), pH:phVal, moist:moistVal, temp:tempVal, hum:humVal, dist:distVal});
-    if(logs.length>20) logs = logs.slice(-20);
-    localStorage.setItem('soilLogs', JSON.stringify(logs));
-    document.getElementById('logArea').innerText = 'Last 3 logs:\n' + logs.slice(-3).map(l=>`${l.time} → pH:${l.pH}, M:${l.moist}, T:${l.temp}, D:${l.dist}`).join('\n');
-
-    return true;
-  }catch(e){
-    setDebug('ReadSensors error: ' + e);
-    alert('Error reading sensors. See debug.');
-    return false;
+/* ---------- Refresh crops (re-check) ---------- */
+btnRefreshCrops.onclick = ()=>{
+  if(phVal===null) alert('No saved soil values.');
+  else {
+    setDebug('Refreshed crop suggestions.');
+    btnAI.click();
   }
-}
-document.getElementById('btnRead').onclick = fetchSensors;
-document.getElementById('btnRefresh').onclick = fetchSensors;
-document.getElementById('btnShowLogs').onclick = ()=> {
-  const logs = JSON.parse(localStorage.getItem('soilLogs')||'[]');
-  alert('Saved logs (last 10):\n' + logs.slice(-10).map(l=>`${l.time} → pH:${l.pH}, M:${l.moist}, T:${l.temp}, D:${l.dist}`).join('\n'));
 };
 
-/* ------------- Crop checks & AI ------------- */
-document.getElementById('btnCheck').onclick = ()=>{
-  const cropName = document.getElementById('cropSelect').value;
-  const r = cropDB.find(x=>x[0]===cropName);
-  if(!r){ alert('Select a crop'); return; }
-  if(phVal===null){ alert('Read sensors first'); return; }
-  const okPH = phVal >= r[1] && phVal <= r[2];
-  const okMoist = moistVal >= r[3];
-  const okTemp = tempVal >= r[4];
-  const ok = okPH && okMoist && okTemp;
-  document.getElementById('lblResult').innerText = ok? `✅ ${cropName} is suitable` : `❌ ${cropName} NOT suitable (see AI suggestions)`;
-};
-
-document.getElementById('btnAI').onclick = ()=>{
-  if(phVal===null){ alert('Read sensors first'); return; }
-  const matches = cropDB.filter(r=>{
-    return phVal >= r[1] && phVal <= r[2] && moistVal >= r[3] && tempVal >= r[4];
-  }).map(r=>r[0]);
-  document.getElementById('aiList').innerText = matches.length? 'AI Suggests: '+matches.join(', ') : 'No suitable crops found';
-  document.getElementById('lblResult').innerText = '';
-};
-
-/* ------------- Robot controls ------------- */
-async function sendCar(cmd){
-  if(!connected){ alert('Connect to ESP32 first'); return; }
-  try {
-    // your ESP32 sketch uses /car?cmd=...
-    const r = await fetch(espUrl + '/car?cmd=' + encodeURIComponent(cmd));
-    const text = await r.text();
-    setDebug(text);
-    document.getElementById('carStatus').innerText = 'Last: ' + cmd + ' → ' + text;
-    // if obstacle message returned, also update UI
-    if(text && text.toLowerCase().includes('obstacle')) {
-      alert('⚠ Obstacle detected by ESP32 — motors stopped');
-    }
-  } catch(e) {
-    setDebug('Car command error: '+e);
-    alert('Error sending car command');
-  }
-}
-
-document.querySelectorAll('button[data-cmd]').forEach(b=>{
-  b.onclick = ()=> sendCar(b.getAttribute('data-cmd'));
-});
-
-/* ------------- Translator (MyMemory) ------------- */
-document.getElementById('btnTranslate').onclick = async ()=>{
-  const txt = document.getElementById('txtTranslate').value.trim();
-  if(!txt){ alert('Enter text to translate'); return; }
-  const lang = document.getElementById('langSelect').value || 'hi';
+/* ---------- Weather (wttr.in simple) ---------- */
+btnWeather.onclick = async ()=>{
+  const city = document.getElementById('city').value.trim();
   try{
-    const res = await fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(txt)+'&langpair=en|'+lang);
-    const j = await res.json();
-    document.getElementById('lblTranslation').innerText = j.responseData.translatedText;
-  }catch(e){
-    document.getElementById('lblTranslation').innerText = 'Translate error: '+e;
-  }
-};
-
-/* ------------- Weather advice (wttr.in) ------------- */
-document.getElementById('btnWeather').onclick = async ()=>{
-  const city = document.getElementById('city').value.trim() || '';
-  try{
-    // wttr.in simple text response
-    const res = await fetch('https://wttr.in/' + encodeURIComponent(city) + '?format=%t+%h+%w');
-    const txt = await res.text();
-    document.getElementById('lblWeather').innerText = 'Weather: ' + txt + '\nAdvice: ' + (getWeatherAdvice(txt));
-  }catch(e){
-    document.getElementById('lblWeather').innerText = 'Weather error: ' + e;
-  }
-};
-function getWeatherAdvice(txt){
-  // txt format like "+29°C 74% ...", approximate rules
-  const nums = txt.match(/-?\d+%?/g) || [];
-  // simple fallback advice
-  if(!nums || nums.length===0) return 'No data';
-  // try humidity
-  const humMatch = txt.match(/(\d{1,3})%/);
-  const hum = humMatch? parseInt(humMatch[1]) : null;
-  if(hum !== null){
-    if(hum < 40) return 'Low humidity — irrigate soon';
-    if(hum < 70) return 'Normal humidity — regular schedule';
-    return 'High humidity — reduce irrigation';
-  }
-  return 'No specific advice';
-}
-
-/* ------------- Profit Estimator ------------- */
-document.getElementById('btnProfit').onclick = ()=>{
-  const cropName = document.getElementById('cropProfit').value;
-  const y = parseFloat(document.getElementById('yieldInput').value || '0');
-  if(!cropName || y<=0){ alert('Select crop and enter yield'); return; }
-  const r = cropDB.find(x=>x[0]===cropName);
-  if(!r){ alert('Crop not found'); return; }
-  const price = r[5]; // price per quintal
-  const profit = y * price;
-  document.getElementById('lblProfit').innerText = `Estimated revenue for ${y} q: ₹${profit.toLocaleString()}`;
-};
-
-/* ------------- Init UI ------------- */
-setConnStatus('Not connected — connect to ESP32 Wi-Fi (or same router) then press Connect');
-setDebug('Ready. Default ESP IP: 192.168.4.1');
-</script>
-</body>
-</html>
+    const res = await fetch(`https://wttr.in/${encodeURIComponent(city)}?
