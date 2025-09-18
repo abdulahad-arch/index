@@ -22,51 +22,36 @@
   .small{font-size:13px;color:#666}
   table{width:100%;border-collapse:collapse}
   th,td{padding:6px;border:1px solid #eee;text-align:left;font-size:13px}
-  .badge{display:inline-block;padding:4px 8px;border-radius:12px;background:#f1f5f9;color:#0f1724;font-weight:700;font-size:12px}
   .nut-low{color:#c53030;font-weight:700}
   .nut-ok{color:#2f855a;font-weight:700}
   .nut-high{color:#ed8936;font-weight:700}
 </style>
 </head>
 <body>
-<header data-i18n="title">Smart AgriAdvisor — Soil & Crop Advisor</header>
+<header>Smart AgriAdvisor — Soil & Crop Advisor</header>
 <div class="container">
 
-  <!-- Soil & Environment (manual entry) -->
-  <div class="card" id="soilCard">
-    <label data-i18n="soil_label">Soil & Environment (manual entry)</label>
+  <!-- Soil & Environment -->
+  <div class="card">
+    <label>Soil & Environment (manual entry)</label>
     <div class="grid">
-      <div>
-        <label data-i18n="ph_label">pH</label>
-        <input id="inpPH" type="number" step="0.1" min="0" max="14" placeholder="e.g. 6.5" />
-      </div>
-      <div>
-        <label data-i18n="moist_label">Moisture (%)</label>
-        <input id="inpMoist" type="number" step="1" min="0" max="100" placeholder="e.g. 45" />
-      </div>
-      <div>
-        <label data-i18n="temp_label">Temperature (°C)</label>
-        <input id="inpTemp" type="number" step="0.1" placeholder="e.g. 28.5" />
-      </div>
-      <div>
-        <label data-i18n="hum_label">Humidity (%)</label>
-        <input id="inpHum" type="number" step="1" min="0" max="100" placeholder="e.g. 60" />
-      </div>
+      <div><label>pH</label><input id="inpPH" type="number" step="0.1" min="0" max="14"/></div>
+      <div><label>Moisture (%)</label><input id="inpMoist" type="number" step="1" min="0" max="100"/></div>
+      <div><label>Temperature (°C)</label><input id="inpTemp" type="number" step="0.1"/></div>
+      <div><label>Humidity (%)</label><input id="inpHum" type="number" step="1" min="0" max="100"/></div>
     </div>
-
     <div class="row" style="margin-top:10px">
-      <button id="btnSaveManual" class="small" data-i18n="save_manual">Save Values</button>
-      <button id="btnPredictNutrients" class="small gray" data-i18n="predict_nutrients">Predict Soil Nutrients</button>
-      <button id="btnRefreshSoil" class="small" data-i18n="refresh">Refresh</button>
+      <button id="btnSaveManual" class="small">Save Values</button>
+      <button id="btnPredictNutrients" class="small gray">Predict Soil Nutrients</button>
+      <button id="btnRefreshSoil" class="small">Refresh</button>
     </div>
-
     <div id="nutrientResult" style="margin-top:10px"></div>
     <div id="soilNotes" class="small" style="margin-top:8px;color:#374151"></div>
   </div>
 
-  <!-- Crop Selection & AI -->
+  <!-- Crop Selection -->
   <div class="card">
-    <label data-i18n="crop_label">Crop Selection & AI</label>
+    <label>Crop Selection & AI</label>
     <div class="row">
       <select id="cropSelect" style="flex:1"></select>
       <button id="btnCheck" class="small">Check Suitability</button>
@@ -77,46 +62,9 @@
     <div id="aiList" class="small" style="margin-top:6px"></div>
   </div>
 
-  <!-- Translator (single + whole-app) -->
-  <div class="card">
-    <label data-i18n="translator_label">Translator (single text or whole app)</label>
-    <div class="row">
-      <input id="txtTranslate" placeholder="Enter text to translate..." style="flex:1" />
-      <select id="langSelect" style="width:160px">
-        <!-- some popular codes; MyMemory supports many -->
-        <option value="hi">Hindi</option>
-        <option value="te">Telugu</option>
-        <option value="bn">Bengali</option>
-        <option value="ta">Tamil</option>
-        <option value="kn">Kannada</option>
-        <option value="mr">Marathi</option>
-        <option value="gu">Gujarati</option>
-        <option value="pa">Punjabi</option>
-        <option value="ur">Urdu</option>
-        <option value="en">English</option>
-        <option value="es">Spanish</option>
-        <option value="fr">French</option>
-        <option value="ar">Arabic</option>
-      </select>
-      <button id="btnTranslate" class="small">Translate</button>
-      <button id="btnTranslateApp" class="small gray">Translate App</button>
-    </div>
-    <div id="lblTranslation" class="small" style="margin-top:8px"></div>
-  </div>
-
-  <!-- Weather -->
-  <div class="card">
-    <label data-i18n="weather_label">Weather Advisory</label>
-    <div class="row">
-      <input id="city" placeholder="City (for quick advice)" style="flex:1"/>
-      <button id="btnWeather" class="small">Check Weather</button>
-    </div>
-    <div id="lblWeather" class="small" style="margin-top:8px"></div>
-  </div>
-
   <!-- Profit -->
   <div class="card">
-    <label data-i18n="profit_label">Profit Estimator</label>
+    <label>Profit Estimator</label>
     <div class="row">
       <select id="cropProfit" style="flex:1"></select>
       <input id="yieldInput" placeholder="Yield (quintals)" style="width:160px"/>
@@ -127,311 +75,142 @@
 
   <!-- Debug -->
   <div class="card">
-    <label data-i18n="debug_label">Debug / Raw</label>
+    <label>Debug / Raw</label>
     <pre id="debug">No data</pre>
   </div>
-
-  <div class="card small">
-    <strong>Important:</strong> nutrient prediction is a heuristic based on pH / moisture / temp. <br>
-    For accurate N/P/K/Ca/Fe/Zn measurements use lab testing or dedicated sensors.
-  </div>
-
 </div>
 
 <script>
-/* ---------- Crop DB (50 crops) ----------
- Each entry: [name, minPH, maxPH, minMoistPercent, minTempC, minHumPercent, pricePerQuintal, nutrientDemand{N,P,K} ]
- nutrientDemand: "High"/"Med"/"Low" for basic planning
------------------------------------------*/
+/* --- Crop database with 50 crops --- */
 const cropDB = [
-["Wheat",6,7.5,40,10,40,2000, {N:"High", P:"Med", K:"Med"}],
-["Rice",5.5,7,60,20,60,1800, {N:"High", P:"High", K:"Med"}],
-["Maize",5.5,7,50,18,50,1500, {N:"High", P:"Med", K:"High"}],
-["Cotton",6,8,50,21,50,5000, {N:"Med", P:"Med", K:"High"}],
-["Potato",5.5,6.5,60,15,60,1200, {N:"Med", P:"High", K:"High"}],
-["Tomato",5.5,7.5,50,18,60,1500, {N:"High", P:"High", K:"Med"}],
-["Onion",6,7,35,15,55,1400, {N:"Med", P:"Med", K:"Med"}],
-["Sugarcane",6,8,60,21,60,3000, {N:"High", P:"Med", K:"High"}],
-["Soybean",6,7.5,40,20,55,2500, {N:"Low", P:"Med", K:"Med"}],
-["Peanut",5.5,7,35,22,50,3000, {N:"Med", P:"High", K:"Med"}],
-["Sunflower",6,7.5,30,18,40,3200, {N:"Med", P:"Med", K:"High"}],
-["Barley",6,7.5,35,15,40,1600, {N:"Med", P:"Low", K:"Med"}],
-["Oats",5,7.5,35,12,40,1800, {N:"Med", P:"Low", K:"Low"}],
-["Millet",5,7.5,30,20,35,1400, {N:"Low", P:"Low", K:"Med"}],
-["Sorghum",5.5,7.5,35,22,35,1600, {N:"Low", P:"Low", K:"Med"}],
-["Chickpea",6,8,30,18,40,4000, {N:"Low", P:"Med", K:"Low"}],
-["Lentil",6,8,30,16,40,4500, {N:"Low", P:"Med", K:"Low"}],
-["Pea",6,7.5,35,15,60,2800, {N:"Low", P:"Med", K:"Low"}],
-["Mustard",5.5,7.5,30,18,50,5000, {N:"Med", P:"Med", K:"Low"}],
-["Groundnut",5.5,7.5,35,22,55,3500, {N:"Med", P:"High", K:"Med"}],
-["Sesame",5.5,7.5,30,20,40,6000, {N:"Low", P:"Low", K:"Med"}],
-["Castor",5.5,7.5,30,20,40,4000, {N:"Low", P:"Low", K:"Low"}],
-["Jute",6,7.5,50,20,70,2500, {N:"High", P:"Med", K:"Low"}],
-["Tea",4.5,6,60,18,80,12000, {N:"Med", P:"Low", K:"Low"}],
-["Coffee",5,6.5,60,20,70,15000, {N:"Med", P:"Low", K:"Low"}],
-["Banana",5.5,7.5,50,22,70,1000, {N:"High", P:"Med", K:"High"}],
-["Mango",5.5,7.5,30,25,60,3000, {N:"Low", P:"Low", K:"Med"}],
-["Apple",6,7,40,10,60,5000, {N:"Med", P:"Med", K:"Low"}],
-["Orange",5.5,6.5,40,20,60,4000, {N:"Med", P:"Med", K:"Low"}],
-["Grapes",6,7.5,35,20,60,4500, {N:"Med", P:"Med", K:"Med"}],
-["Papaya",6,7.5,40,22,65,2000, {N:"High", P:"Med", K:"High"}],
-["Guava",5,7.5,35,20,60,2500, {N:"Med", P:"Med", K:"Med"}],
-["Pineapple",4.5,6.5,50,22,70,3000, {N:"Low", P:"Low", K:"Med"}],
-["Pomegranate",5.5,7.5,35,20,50,5000, {N:"Low", P:"Low", K:"Low"}],
-["Cabbage",6,7.5,40,15,80,1200, {N:"High", P:"Med", K:"Med"}],
-["Cauliflower",6,7.5,40,15,80,1400, {N:"High", P:"Med", K:"Med"}],
-["Carrot",6,7,35,15,65,2000, {N:"Med", P:"Low", K:"Low"}],
-["Spinach",6,7.5,35,15,70,1000, {N:"High", P:"Med", K:"Low"}],
-["Cucumber",5.5,7.5,40,18,70,1500, {N:"High", P:"Med", K:"Med"}],
-["Chilli",5.5,7.5,40,20,60,6000, {N:"High", P:"Med", K:"High"}],
-["Brinjal",5.5,7.5,40,20,60,2000, {N:"High", P:"Med", K:"Med"}],
-["Okra",6,7.5,40,20,60,2500, {N:"Med", P:"Low", K:"Med"}],
-["Pumpkin",6,7.5,40,18,60,1500, {N:"Med", P:"Low", K:"High"}],
-["Melon",5.5,7.5,35,20,60,2000, {N:"Low", P:"Low", K:"Med"}],
-["Watermelon",5.5,7.5,35,22,60,1800, {N:"Low", P:"Low", K:"Med"}],
-["Strawberry",5.5,7,40,18,70,8000, {N:"High", P:"High", K:"Med"}],
-["Pear",6,7,35,15,60,3500, {N:"Med", P:"Low", K:"Low"}],
-["Plum",6,7.5,35,15,60,3000, {N:"Med", P:"Low", K:"Low"}]
+["Wheat",6,7.5,40,10,40,2000,{N:"High",P:"Med",K:"Med"}],
+["Rice",5.5,7,60,20,60,1800,{N:"High",P:"High",K:"Med"}],
+["Maize",5.5,7,50,18,50,1500,{N:"High",P:"Med",K:"High"}],
+["Cotton",6,8,50,21,50,5000,{N:"Med",P:"Med",K:"High"}],
+["Potato",5.5,6.5,60,15,60,1200,{N:"Med",P:"High",K:"High"}],
+["Tomato",5.5,7.5,50,18,60,1500,{N:"High",P:"High",K:"Med"}],
+["Onion",6,7,35,15,55,1400,{N:"Med",P:"Med",K:"Med"}],
+["Sugarcane",6,8,60,21,60,3000,{N:"High",P:"Med",K:"High"}],
+["Soybean",6,7.5,40,20,55,2500,{N:"Low",P:"Med",K:"Med"}],
+["Peanut",5.5,7,35,22,50,3000,{N:"Med",P:"High",K:"Med"}],
+["Sunflower",6,7.5,30,18,40,3200,{N:"Med",P:"Med",K:"High"}],
+["Barley",6,7.5,35,15,40,1600,{N:"Med",P:"Low",K:"Med"}],
+["Oats",5,7.5,35,12,40,1800,{N:"Med",P:"Low",K:"Low"}],
+["Millet",5,7.5,30,20,35,1400,{N:"Low",P:"Low",K:"Med"}],
+["Sorghum",5.5,7.5,35,22,35,1600,{N:"Low",P:"Low",K:"Med"}],
+["Chickpea",6,8,30,18,40,4000,{N:"Low",P:"Med",K:"Low"}],
+["Lentil",6,8,30,16,40,4500,{N:"Low",P:"Med",K:"Low"}],
+["Pea",6,7.5,35,15,60,2800,{N:"Low",P:"Med",K:"Low"}],
+["Mustard",5.5,7.5,30,18,50,5000,{N:"Med",P:"Med",K:"Low"}],
+["Groundnut",5.5,7.5,35,22,55,3500,{N:"Med",P:"High",K:"Med"}],
+["Sesame",5.5,7.5,30,20,40,6000,{N:"Low",P:"Low",K:"Med"}],
+["Castor",5.5,7.5,30,20,40,4000,{N:"Low",P:"Low",K:"Low"}],
+["Jute",6,7.5,50,20,70,2500,{N:"High",P:"Med",K:"Low"}],
+["Tea",4.5,6,60,18,80,12000,{N:"Med",P:"Low",K:"Low"}],
+["Coffee",5,6.5,60,20,70,15000,{N:"Med",P:"Low",K:"Low"}],
+["Banana",5.5,7.5,50,22,70,1000,{N:"High",P:"Med",K:"High"}],
+["Mango",5.5,7.5,30,25,60,3000,{N:"Low",P:"Low",K:"Med"}],
+["Apple",6,7,40,10,60,5000,{N:"Med",P:"Med",K:"Low"}],
+["Orange",5.5,6.5,40,20,60,4000,{N:"Med",P:"Med",K:"Low"}],
+["Grapes",6,7.5,35,20,60,4500,{N:"Med",P:"Med",K:"Med"}],
+["Papaya",6,7.5,40,22,65,2000,{N:"High",P:"Med",K:"High"}],
+["Guava",5,7.5,35,20,60,2500,{N:"Med",P:"Med",K:"Med"}],
+["Pineapple",4.5,6.5,50,22,70,3000,{N:"Low",P:"Low",K:"Med"}],
+["Pomegranate",5.5,7.5,35,20,50,5000,{N:"Low",P:"Low",K:"Low"}],
+["Cabbage",6,7.5,40,15,80,1200,{N:"High",P:"Med",K:"Med"}],
+["Cauliflower",6,7.5,40,15,80,1400,{N:"High",P:"Med",K:"Med"}],
+["Carrot",6,7,35,15,65,2000,{N:"Med",P:"Low",K:"Low"}],
+["Spinach",6,7.5,35,15,70,1000,{N:"High",P:"Med",K:"Low"}],
+["Cucumber",5.5,7.5,40,18,70,1500,{N:"High",P:"Med",K:"Med"}],
+["Chilli",5.5,7.5,40,20,60,6000,{N:"High",P:"Med",K:"High"}],
+["Brinjal",5.5,7.5,40,20,60,2000,{N:"High",P:"Med",K:"Med"}],
+["Okra",6,7.5,40,20,60,2500,{N:"Med",P:"Low",K:"Med"}],
+["Pumpkin",6,7.5,40,18,60,1500,{N:"Med",P:"Low",K:"High"}],
+["Melon",5.5,7.5,35,20,60,2000,{N:"Low",P:"Low",K:"Med"}],
+["Watermelon",5.5,7.5,35,22,60,1800,{N:"Low",P:"Low",K:"Med"}],
+["Strawberry",5.5,7,40,18,70,8000,{N:"High",P:"High",K:"Med"}],
+["Pear",6,7,35,15,60,3500,{N:"Med",P:"Low",K:"Low"}],
+["Plum",6,7.5,35,15,60,3000,{N:"Med",P:"Low",K:"Low"}]
 ];
 
-/* ---------- UI Elements ---------- */
-const inpPH = document.getElementById('inpPH');
-const inpMoist = document.getElementById('inpMoist');
-const inpTemp = document.getElementById('inpTemp');
-const inpHum = document.getElementById('inpHum');
-const btnSaveManual = document.getElementById('btnSaveManual');
-const btnPredict = document.getElementById('btnPredictNutrients');
-const btnRefreshSoil = document.getElementById('btnRefreshSoil');
-const nutrientResult = document.getElementById('nutrientResult');
-const soilNotes = document.getElementById('soilNotes');
-const debug = document.getElementById('debug');
+/* --- App state --- */
+let phVal=null, moistVal=null, tempVal=null, humVal=null;
+let nutrients=null;
 
-const cropSelect = document.getElementById('cropSelect');
-const cropProfit = document.getElementById('cropProfit');
-const btnCheck = document.getElementById('btnCheck');
-const btnAI = document.getElementById('btnAI');
-const lblResult = document.getElementById('lblResult');
-const aiList = document.getElementById('aiList');
-const btnRefreshCrops = document.getElementById('btnRefreshCrops');
-
-const btnTranslate = document.getElementById('btnTranslate');
-const btnTranslateApp = document.getElementById('btnTranslateApp');
-const txtTranslate = document.getElementById('txtTranslate');
-const langSelect = document.getElementById('langSelect');
-const lblTranslation = document.getElementById('lblTranslation');
-
-const btnWeather = document.getElementById('btnWeather');
-const lblWeather = document.getElementById('lblWeather');
-
-const btnProfit = document.getElementById('btnProfit');
-const yieldInput = document.getElementById('yieldInput');
-const lblProfit = document.getElementById('lblProfit');
-
-/* ---------- App state ---------- */
-let phVal = null, moistVal = null, tempVal = null, humVal = null;
-let nutrients = null; // will be object: {N:'Low'/'OK'/'High', P:..., K:..., Ca:..., Fe:..., Zn:...}
-
-/* ---------- Helpers ---------- */
-function setDebug(t){ debug.innerText = t; }
-function clampNum(v, min, max){ return Math.max(min, Math.min(max, v)); }
-
-/* ---------- Populate crop selects ---------- */
-function populateCrops(){
-  cropSelect.innerHTML = '';
-  cropProfit.innerHTML = '';
-  for(const c of cropDB){
-    let opt=document.createElement('option'); opt.value=c[0]; opt.text=c[0]; cropSelect.appendChild(opt);
-    let opt2=document.createElement('option'); opt2.value=c[0]; opt2.text=c[0]; cropProfit.appendChild(opt2);
-  }
-}
-populateCrops();
-
-/* ---------- Manual save ---------- */
-btnSaveManual.onclick = ()=>{
-  const ph = parseFloat(inpPH.value);
-  const mo = parseFloat(inpMoist.value);
-  const te = parseFloat(inpTemp.value);
-  const hu = parseFloat(inpHum.value);
-  if(isNaN(ph) || isNaN(mo) || isNaN(te) || isNaN(hu)){ alert("Enter all values (pH, moisture, temp, humidity)"); return; }
-  phVal = clampNum(ph,0,14);
-  moistVal = clampNum(mo,0,100);
-  tempVal = te;
-  humVal = clampNum(hu,0,100);
-  setDebug(`Saved manual soil values → pH:${phVal} Moist:${moistVal}% Temp:${tempVal}C Hum:${humVal}%`);
-  nutrientResult.innerHTML = '';
-  soilNotes.innerText = 'Manual values saved — now Predict Nutrients or Check Crops.';
+/* --- DOM Ready --- */
+window.onload = ()=>{
+  const cropSelect=document.getElementById("cropSelect");
+  const cropProfit=document.getElementById("cropProfit");
+  cropDB.forEach(c=>{
+    cropSelect.add(new Option(c[0],c[0]));
+    cropProfit.add(new Option(c[0],c[0]));
+  });
 };
 
-/* ---------- Refresh Soil (recalculate) ---------- */
-btnRefreshSoil.onclick = ()=>{
-  if(phVal===null){ alert('No saved soil values. Enter them and Save Values first.'); return; }
-  nutrients = predictNutrients(phVal, moistVal, tempVal, humVal);
-  renderNutrients(nutrients);
-};
+/* --- Debug helper --- */
+function setDebug(t){document.getElementById("debug").innerText=t;}
 
-/* ---------- Predict nutrients — heuristic ---------- */
-/* This is a rule-based estimation: NOT a lab measurement.
-   Rules (simplified):
-   - pH affects availability: very low pH (<5.5) => P low availability, Ca low, Mo low, Fe/Mn/Zn more soluble (may be high)
-   - pH very high (>7.8) => Fe/Mn/Zn less available, Ca/Mg more present, P may precipitate => P low availability
-   - Moisture: very low moisture reduces N mineralization => N availability low; saturated/wet may reduce O2 and reduce N availability (but increase denitrification)
-   - Temperature influences biological activity (low temp -> lower N mineralization)
-   We'll combine these into simple Low/OK/High flags per nutrient.
-*/
-function predictNutrients(ph, moist, temp, hum){
-  // sanitize
-  ph = clampNum(ph,0,14);
-  moist = clampNum(moist,0,100);
-  temp = temp || 25;
-  hum = hum || 50;
-
-  const out = { N:'OK', P:'OK', K:'OK', Ca:'OK', Fe:'OK', Zn:'OK' };
-
-  // Nitrogen (N)
-  // if moisture <30 or temp <12 -> N mineralization low
-  if(moist < 30 || temp < 12) out.N = 'Low';
-  else if(moist > 85) out.N = 'Low'; // too waterlogged -> denitrification
-  else out.N = 'OK';
-
-  // Phosphorus (P)
-  if(ph < 5.5 || ph > 7.8) out.P = 'Low';
-  else out.P = 'OK';
-
-  // Potassium (K)
-  // K availability less tied to pH; extreme leaching (very high moisture) => K low
-  if(moist > 80) out.K = 'Low';
-  else out.K = 'OK';
-
-  // Calcium (Ca)
-  if(ph < 5.5) out.Ca = 'Low';
-  else if(ph > 8.0) out.Ca = 'High';
-  else out.Ca = 'OK';
-
-  // Iron (Fe)
-  if(ph < 6.0) out.Fe = 'High'; // acidic soils make Fe more available (but risk toxicity)
-  else if(ph > 7.5) out.Fe = 'Low';
-  else out.Fe = 'OK';
-
-  // Zinc (Zn) similar to Fe
-  if(ph < 5.5) out.Zn = 'High';
-  else if(ph > 7.5) out.Zn = 'Low';
-  else out.Zn = 'OK';
-
+/* --- Predict nutrients (simple rules) --- */
+function predictNutrients(ph,moist,temp){
+  const out={N:'OK',P:'OK',K:'OK',Ca:'OK',Fe:'OK',Zn:'OK'};
+  if(moist<30||temp<12) out.N='Low';
+  if(moist>85) out.N='Low';
+  if(ph<5.5||ph>7.8) out.P='Low';
+  if(moist>80) out.K='Low';
+  if(ph<5.5) out.Ca='Low'; else if(ph>8) out.Ca='High';
+  if(ph<6) out.Fe='High'; else if(ph>7.5) out.Fe='Low';
+  if(ph<5.5) out.Zn='High'; else if(ph>7.5) out.Zn='Low';
   return out;
 }
-
-/* ---------- Render nutrients results ---------- */
 function renderNutrients(n){
-  if(!n) return;
-  let html = `<strong>Predicted nutrient availability</strong><br><table><tr><th>Nutrient</th><th>Availability</th><th>Suggestion</th></tr>`;
-  function sugFor(k,v){
-    if(v==='OK') return '—';
-    if(k==='N' && v==='Low') return 'Apply nitrogen fertilizer (urea/organic manure).';
-    if(k==='P' && v==='Low') return 'Apply rock phosphate / single superphosphate; consider liming if pH too low.';
-    if(k==='K' && v==='Low') return 'Apply muriate of potash (KCl) or potash-rich organic fertilizer.';
-    if(k==='Ca' && v==='Low') return 'Apply agricultural lime (calcium carbonate) or gypsum as per soil test.';
-    if(k==='Fe' && v==='Low') return 'Fe chelate foliar feed or soil application; check pH (raise acidity).';
-    if(k==='Zn' && v==='Low') return 'Apply zinc sulfate soil application or foliar spray.';
-    if(v==='High') return 'Monitor — may cause imbalance; consider crop choice / pH correction.';
-    return 'Check lab test.';
-  }
-  html += `<tr><td>N</td><td class="${n.N==='Low'?'nut-low':n.N==='High'?'nut-high':'nut-ok'}">${n.N}</td><td>${sugFor('N', n.N)}</td></tr>`;
-  html += `<tr><td>P</td><td class="${n.P==='Low'?'nut-low':n.P==='High'?'nut-high':'nut-ok'}">${n.P}</td><td>${sugFor('P', n.P)}</td></tr>`;
-  html += `<tr><td>K</td><td class="${n.K==='Low'?'nut-low':n.K==='High'?'nut-high':'nut-ok'}">${n.K}</td><td>${sugFor('K', n.K)}</td></tr>`;
-  html += `<tr><td>Ca</td><td class="${n.Ca==='Low'?'nut-low':n.Ca==='High'?'nut-high':'nut-ok'}">${n.Ca}</td><td>${sugFor('Ca', n.Ca)}</td></tr>`;
-  html += `<tr><td>Fe</td><td class="${n.Fe==='Low'?'nut-low':n.Fe==='High'?'nut-high':'nut-ok'}">${n.Fe}</td><td>${sugFor('Fe', n.Fe)}</td></tr>`;
-  html += `<tr><td>Zn</td><td class="${n.Zn==='Low'?'nut-low':n.Zn==='High'?'nut-high':'nut-ok'}">${n.Zn}</td><td>${sugFor('Zn', n.Zn)}</td></tr>`;
-  html += `</table>`;
-  nutrientResult.innerHTML = html;
-  soilNotes.innerText = 'Note: This is an estimation. For precise nutrient levels use a laboratory soil test or dedicated sensors.';
-  setDebug('Nutrient prediction generated at ' + new Date().toLocaleString());
+  let html=`<table><tr><th>Nutrient</th><th>Status</th></tr>`;
+  for(let k in n){html+=`<tr><td>${k}</td><td>${n[k]}</td></tr>`;}
+  html+=`</table>`;
+  document.getElementById("nutrientResult").innerHTML=html;
 }
 
-/* ---------- Button: Predict nutrients ---------- */
-btnPredict.onclick = ()=>{
-  if(phVal===null){
-    alert('No soil values saved. Enter values and Save Values first.');
-    return;
-  }
-  nutrients = predictNutrients(phVal, moistVal, tempVal, humVal);
+/* --- Buttons --- */
+document.getElementById("btnSaveManual").onclick=()=>{
+  phVal=parseFloat(document.getElementById("inpPH").value);
+  moistVal=parseFloat(document.getElementById("inpMoist").value);
+  tempVal=parseFloat(document.getElementById("inpTemp").value);
+  humVal=parseFloat(document.getElementById("inpHum").value);
+  setDebug(`Saved values pH:${phVal} Moist:${moistVal}% Temp:${tempVal}C Hum:${humVal}%`);
+};
+
+document.getElementById("btnPredictNutrients").onclick=()=>{
+  if(phVal==null){alert("Save values first");return;}
+  nutrients=predictNutrients(phVal,moistVal,tempVal);
   renderNutrients(nutrients);
 };
 
-/* ---------- Suitability check ---------- */
-btnCheck.onclick = ()=>{
-  const cropName = cropSelect.value;
-  const crop = cropDB.find(c=>c[0]===cropName);
-  if(!crop){ alert('Choose crop'); return; }
-  if(phVal===null){ alert('No soil values saved. Enter them and Save Values first.'); return; }
-
-  const [name, minPH, maxPH, minMoist, minTemp, minHum] = [crop[0], crop[1], crop[2], crop[3], crop[4], crop[5]];
-  const okPH = phVal >= minPH && phVal <= maxPH;
-  const okMoist = moistVal >= minMoist;
-  const okTemp = tempVal >= minTemp;
-  const okHum = humVal >= minHum;
-
-  let text = '';
-  if(okPH && okMoist && okTemp && okHum){
-    text += `✅ ${name} — Basic environment suitable.`;
-  } else {
-    text += `❌ ${name} — Not suitable. Issues: `;
-    const issues = [];
-    if(!okPH) issues.push(`pH (${phVal} not in ${minPH}-${maxPH})`);
-    if(!okMoist) issues.push(`Moisture (${moistVal}% < ${minMoist}%)`);
-    if(!okTemp) issues.push(`Temp (${tempVal}°C < ${minTemp}°C)`);
-    if(!okHum) issues.push(`Humidity (${humVal}% < ${minHum}%)`);
-    text += issues.join(', ');
-  }
-
-  // nutrients check
-  if(!nutrients) nutrients = predictNutrients(phVal, moistVal, tempVal, humVal);
-  // check crop nutrient demand: if crop needs High nutrient and predicted availability is Low => warn
-  const demand = crop[7];
-  const nutIssues = [];
-  ['N','P','K'].forEach(k=>{
-    const need = demand[k]; // "High","Med","Low"
-    const avail = nutrients[k];
-    if(need === 'High' && avail === 'Low') nutIssues.push(`${k} LOW (add fertilizer)`);
-  });
-  if(nutIssues.length) text += `\n⚠ Nutrient advice: ${nutIssues.join('; ')}`;
-
-  lblResult.innerText = text;
-  setDebug('Suitability check for ' + name + ' done.');
+document.getElementById("btnCheck").onclick=()=>{
+  if(phVal==null){alert("Save soil values first");return;}
+  const cropName=document.getElementById("cropSelect").value;
+  const crop=cropDB.find(c=>c[0]==cropName);
+  let ok=(phVal>=crop[1]&&phVal<=crop[2]&&moistVal>=crop[3]&&tempVal>=crop[4]&&humVal>=crop[5]);
+  document.getElementById("lblResult").innerText=ok?`✅ Suitable for ${cropName}`:`❌ Not Suitable`;
 };
 
-/* ---------- AI Suggest ---------- */
-btnAI.onclick = ()=>{
-  if(phVal===null){ alert('Save soil values first.'); return; }
-  // score crops: +2 for PH in range, +1 for moist >= minMoist, +1 for temp >= minTemp, +1 for hum >= minHum
-  const scored = cropDB.map(c=>{
-    let score = 0;
-    if(phVal >= c[1] && phVal <= c[2]) score += 2;
-    if(moistVal >= c[3]) score += 1;
-    if(tempVal >= c[4]) score += 1;
-    if(humVal >= c[5]) score += 1;
-    // nutrient compatibility: if crop needs High N and predicted N low => -2 penalty
-    if(nutrients) {
-      const needN = c[7].N;
-      if(needN === 'High' && nutrients.N === 'Low') score -= 2;
-    }
-    return { name: c[0], score };
-  });
-  scored.sort((a,b)=>b.score - a.score);
-  const top = scored.slice(0,6).filter(x=>x.score>0).map(x=>x.name);
-  aiList.innerText = top.length ? 'AI Suggests: ' + top.join(', ') : 'No good matches — consider improving soil or selecting different crops.';
+document.getElementById("btnAI").onclick=()=>{
+  if(phVal==null){alert("Save soil values first");return;}
+  const scored=cropDB.map(c=>{
+    let s=0;
+    if(phVal>=c[1]&&phVal<=c[2])s+=2;
+    if(moistVal>=c[3])s++;
+    if(tempVal>=c[4])s++;
+    if(humVal>=c[5])s++;
+    return {name:c[0],score:s};
+  }).sort((a,b)=>b.score-a.score);
+  document.getElementById("aiList").innerText="AI Suggests: "+scored.slice(0,5).map(x=>x.name).join(", ");
 };
 
-/* ---------- Refresh crops (re-check) ---------- */
-btnRefreshCrops.onclick = ()=>{
-  if(phVal===null) alert('No saved soil values.');
-  else {
-    setDebug('Refreshed crop suggestions.');
-    btnAI.click();
-  }
+document.getElementById("btnProfit").onclick=()=>{
+  const cropName=document.getElementById("cropProfit").value;
+  const y=parseFloat(document.getElementById("yieldInput").value||0);
+  const crop=cropDB.find(c=>c[0]==cropName);
+  document.getElementById("lblProfit").innerText=`Profit: ₹${(y*crop[6]).toLocaleString()}`;
 };
-
-/* ---------- Weather (wttr.in simple) ---------- */
-btnWeather.onclick = async ()=>{
-  const city = document.getElementById('city').value.trim();
-  try{
-    const res = await fetch(`https://wttr.in/${encodeURIComponent(city)}?
+</script>
+</body>
+</html>
