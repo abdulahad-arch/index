@@ -16,7 +16,6 @@
   button.gray{background:#718096}
   button.small{padding:6px 8px;font-size:13px}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
-  .stat{font-weight:700;margin-top:6px}
   .result{color:#0b6b35;font-weight:700;margin-top:8px}
   pre{background:#0f1724;color:#e6eef8;padding:10px;border-radius:6px;overflow:auto;max-height:220px}
   .small{font-size:13px;color:#666}
@@ -28,7 +27,7 @@
 </style>
 </head>
 <body>
-<header>Smart AgriAdvisor — Soil & Crop Advisor</header>
+<header>🌱 Smart AgriAdvisor — Soil & Crop Advisor</header>
 <div class="container">
 
   <!-- Soil & Environment -->
@@ -69,88 +68,94 @@
       <select id="cropProfit" style="flex:1"></select>
       <input id="yieldInput" placeholder="Yield (quintals)" style="width:160px"/>
       <button id="btnProfit" class="small">Estimate</button>
+      <button id="btnRefreshProfit" class="small gray">Refresh</button>
     </div>
     <div id="lblProfit" class="result" style="margin-top:8px"></div>
   </div>
 
+  <!-- Translator -->
+  <div class="card">
+    <label>Translator</label>
+    <div class="row">
+      <input id="txtTranslate" placeholder="Enter text" style="flex:1"/>
+      <select id="langSelect">
+        <option value="hi">Hindi</option>
+        <option value="te">Telugu</option>
+        <option value="ta">Tamil</option>
+        <option value="mr">Marathi</option>
+        <option value="bn">Bengali</option>
+        <option value="gu">Gujarati</option>
+        <option value="kn">Kannada</option>
+        <option value="ur">Urdu</option>
+        <option value="en">English</option>
+        <option value="es">Spanish</option>
+        <option value="fr">French</option>
+        <option value="ar">Arabic</option>
+      </select>
+      <button id="btnTranslate" class="small">Translate</button>
+      <button id="btnTranslateApp" class="small gray">Translate App</button>
+    </div>
+    <div id="lblTranslation" class="small" style="margin-top:8px"></div>
+  </div>
+
+  <!-- Weather -->
+  <div class="card">
+    <label>Weather Advisory</label>
+    <div class="row">
+      <input id="city" placeholder="City" style="flex:1"/>
+      <button id="btnWeather" class="small">Check</button>
+    </div>
+    <div id="lblWeather" class="small" style="margin-top:8px"></div>
+  </div>
+
   <!-- Debug -->
   <div class="card">
-    <label>Debug / Raw</label>
+    <label>Debug</label>
     <pre id="debug">No data</pre>
   </div>
 </div>
 
 <script>
-/* --- Crop database with 50 crops --- */
-const cropDB = [
-["Wheat",6,7.5,40,10,40,2000,{N:"High",P:"Med",K:"Med"}],
-["Rice",5.5,7,60,20,60,1800,{N:"High",P:"High",K:"Med"}],
-["Maize",5.5,7,50,18,50,1500,{N:"High",P:"Med",K:"High"}],
-["Cotton",6,8,50,21,50,5000,{N:"Med",P:"Med",K:"High"}],
-["Potato",5.5,6.5,60,15,60,1200,{N:"Med",P:"High",K:"High"}],
-["Tomato",5.5,7.5,50,18,60,1500,{N:"High",P:"High",K:"Med"}],
-["Onion",6,7,35,15,55,1400,{N:"Med",P:"Med",K:"Med"}],
-["Sugarcane",6,8,60,21,60,3000,{N:"High",P:"Med",K:"High"}],
-["Soybean",6,7.5,40,20,55,2500,{N:"Low",P:"Med",K:"Med"}],
-["Peanut",5.5,7,35,22,50,3000,{N:"Med",P:"High",K:"Med"}],
-["Sunflower",6,7.5,30,18,40,3200,{N:"Med",P:"Med",K:"High"}],
-["Barley",6,7.5,35,15,40,1600,{N:"Med",P:"Low",K:"Med"}],
-["Oats",5,7.5,35,12,40,1800,{N:"Med",P:"Low",K:"Low"}],
-["Millet",5,7.5,30,20,35,1400,{N:"Low",P:"Low",K:"Med"}],
-["Sorghum",5.5,7.5,35,22,35,1600,{N:"Low",P:"Low",K:"Med"}],
-["Chickpea",6,8,30,18,40,4000,{N:"Low",P:"Med",K:"Low"}],
-["Lentil",6,8,30,16,40,4500,{N:"Low",P:"Med",K:"Low"}],
-["Pea",6,7.5,35,15,60,2800,{N:"Low",P:"Med",K:"Low"}],
-["Mustard",5.5,7.5,30,18,50,5000,{N:"Med",P:"Med",K:"Low"}],
-["Groundnut",5.5,7.5,35,22,55,3500,{N:"Med",P:"High",K:"Med"}],
-["Sesame",5.5,7.5,30,20,40,6000,{N:"Low",P:"Low",K:"Med"}],
-["Castor",5.5,7.5,30,20,40,4000,{N:"Low",P:"Low",K:"Low"}],
-["Jute",6,7.5,50,20,70,2500,{N:"High",P:"Med",K:"Low"}],
-["Tea",4.5,6,60,18,80,12000,{N:"Med",P:"Low",K:"Low"}],
-["Coffee",5,6.5,60,20,70,15000,{N:"Med",P:"Low",K:"Low"}],
-["Banana",5.5,7.5,50,22,70,1000,{N:"High",P:"Med",K:"High"}],
-["Mango",5.5,7.5,30,25,60,3000,{N:"Low",P:"Low",K:"Med"}],
-["Apple",6,7,40,10,60,5000,{N:"Med",P:"Med",K:"Low"}],
-["Orange",5.5,6.5,40,20,60,4000,{N:"Med",P:"Med",K:"Low"}],
-["Grapes",6,7.5,35,20,60,4500,{N:"Med",P:"Med",K:"Med"}],
-["Papaya",6,7.5,40,22,65,2000,{N:"High",P:"Med",K:"High"}],
-["Guava",5,7.5,35,20,60,2500,{N:"Med",P:"Med",K:"Med"}],
-["Pineapple",4.5,6.5,50,22,70,3000,{N:"Low",P:"Low",K:"Med"}],
-["Pomegranate",5.5,7.5,35,20,50,5000,{N:"Low",P:"Low",K:"Low"}],
-["Cabbage",6,7.5,40,15,80,1200,{N:"High",P:"Med",K:"Med"}],
-["Cauliflower",6,7.5,40,15,80,1400,{N:"High",P:"Med",K:"Med"}],
-["Carrot",6,7,35,15,65,2000,{N:"Med",P:"Low",K:"Low"}],
-["Spinach",6,7.5,35,15,70,1000,{N:"High",P:"Med",K:"Low"}],
-["Cucumber",5.5,7.5,40,18,70,1500,{N:"High",P:"Med",K:"Med"}],
-["Chilli",5.5,7.5,40,20,60,6000,{N:"High",P:"Med",K:"High"}],
-["Brinjal",5.5,7.5,40,20,60,2000,{N:"High",P:"Med",K:"Med"}],
-["Okra",6,7.5,40,20,60,2500,{N:"Med",P:"Low",K:"Med"}],
-["Pumpkin",6,7.5,40,18,60,1500,{N:"Med",P:"Low",K:"High"}],
-["Melon",5.5,7.5,35,20,60,2000,{N:"Low",P:"Low",K:"Med"}],
-["Watermelon",5.5,7.5,35,22,60,1800,{N:"Low",P:"Low",K:"Med"}],
-["Strawberry",5.5,7,40,18,70,8000,{N:"High",P:"High",K:"Med"}],
-["Pear",6,7,35,15,60,3500,{N:"Med",P:"Low",K:"Low"}],
-["Plum",6,7.5,35,15,60,3000,{N:"Med",P:"Low",K:"Low"}]
+/* --- Crop DB (50 crops simplified) --- */
+const cropDB=[
+["Wheat",6,7.5,40,10,40,2000],["Rice",5.5,7,60,20,60,1800],["Maize",5.5,7,50,18,50,1500],
+["Cotton",6,8,50,21,50,5000],["Potato",5.5,6.5,60,15,60,1200],["Tomato",5.5,7.5,50,18,60,1500],
+["Onion",6,7,35,15,55,1400],["Sugarcane",6,8,60,21,60,3000],["Soybean",6,7.5,40,20,55,2500],
+["Peanut",5.5,7,35,22,50,3000],["Sunflower",6,7.5,30,18,40,3200],["Barley",6,7.5,35,15,40,1600],
+["Oats",5,7.5,35,12,40,1800],["Millet",5,7.5,30,20,35,1400],["Sorghum",5.5,7.5,35,22,35,1600],
+["Chickpea",6,8,30,18,40,4000],["Lentil",6,8,30,16,40,4500],["Pea",6,7.5,35,15,60,2800],
+["Mustard",5.5,7.5,30,18,50,5000],["Groundnut",5.5,7.5,35,22,55,3500],["Sesame",5.5,7.5,30,20,40,6000],
+["Castor",5.5,7.5,30,20,40,4000],["Jute",6,7.5,50,20,70,2500],["Tea",4.5,6,60,18,80,12000],
+["Coffee",5,6.5,60,20,70,15000],["Banana",5.5,7.5,50,22,70,1000],["Mango",5.5,7.5,30,25,60,3000],
+["Apple",6,7,40,10,60,5000],["Orange",5.5,6.5,40,20,60,4000],["Grapes",6,7.5,35,20,60,4500],
+["Papaya",6,7.5,40,22,65,2000],["Guava",5,7.5,35,20,60,2500],["Pineapple",4.5,6.5,50,22,70,3000],
+["Pomegranate",5.5,7.5,35,20,50,5000],["Cabbage",6,7.5,40,15,80,1200],["Cauliflower",6,7.5,40,15,80,1400],
+["Carrot",6,7,35,15,65,2000],["Spinach",6,7.5,35,15,70,1000],["Cucumber",5.5,7.5,40,18,70,1500],
+["Chilli",5.5,7.5,40,20,60,6000],["Brinjal",5.5,7.5,40,20,60,2000],["Okra",6,7.5,40,20,60,2500],
+["Pumpkin",6,7.5,40,18,60,1500],["Melon",5.5,7.5,35,20,60,2000],["Watermelon",5.5,7.5,35,22,60,1800],
+["Strawberry",5.5,7,40,18,70,8000],["Pear",6,7,35,15,60,3500],["Plum",6,7.5,35,15,60,3000]
 ];
 
-/* --- App state --- */
+/* --- State --- */
 let phVal=null, moistVal=null, tempVal=null, humVal=null;
 let nutrients=null;
 
-/* --- DOM Ready --- */
-window.onload = ()=>{
+/* --- Init dropdowns --- */
+function populateCrops(){
   const cropSelect=document.getElementById("cropSelect");
   const cropProfit=document.getElementById("cropProfit");
+  cropSelect.innerHTML=""; cropProfit.innerHTML="";
   cropDB.forEach(c=>{
     cropSelect.add(new Option(c[0],c[0]));
     cropProfit.add(new Option(c[0],c[0]));
   });
-};
+}
+window.onload=populateCrops;
 
 /* --- Debug helper --- */
 function setDebug(t){document.getElementById("debug").innerText=t;}
 
-/* --- Predict nutrients (simple rules) --- */
+/* --- Nutrient prediction --- */
 function predictNutrients(ph,moist,temp){
   const out={N:'OK',P:'OK',K:'OK',Ca:'OK',Fe:'OK',Zn:'OK'};
   if(moist<30||temp<12) out.N='Low';
@@ -167,23 +172,34 @@ function renderNutrients(n){
   for(let k in n){html+=`<tr><td>${k}</td><td>${n[k]}</td></tr>`;}
   html+=`</table>`;
   document.getElementById("nutrientResult").innerHTML=html;
+  document.getElementById("soilNotes").innerText="Heuristic only: real soil test needed for precision.";
 }
 
-/* --- Buttons --- */
+/* --- Soil buttons --- */
 document.getElementById("btnSaveManual").onclick=()=>{
   phVal=parseFloat(document.getElementById("inpPH").value);
   moistVal=parseFloat(document.getElementById("inpMoist").value);
   tempVal=parseFloat(document.getElementById("inpTemp").value);
   humVal=parseFloat(document.getElementById("inpHum").value);
-  setDebug(`Saved values pH:${phVal} Moist:${moistVal}% Temp:${tempVal}C Hum:${humVal}%`);
+  setDebug(`Saved pH:${phVal} Moist:${moistVal}% Temp:${tempVal}C Hum:${humVal}%`);
 };
-
 document.getElementById("btnPredictNutrients").onclick=()=>{
   if(phVal==null){alert("Save values first");return;}
   nutrients=predictNutrients(phVal,moistVal,tempVal);
   renderNutrients(nutrients);
 };
+document.getElementById("btnRefreshSoil").onclick=()=>{
+  document.getElementById("inpPH").value="";
+  document.getElementById("inpMoist").value="";
+  document.getElementById("inpTemp").value="";
+  document.getElementById("inpHum").value="";
+  document.getElementById("nutrientResult").innerHTML="";
+  document.getElementById("soilNotes").innerText="";
+  setDebug("Soil values reset.");
+  phVal=moistVal=tempVal=humVal=null; nutrients=null;
+};
 
+/* --- Crop buttons --- */
 document.getElementById("btnCheck").onclick=()=>{
   if(phVal==null){alert("Save soil values first");return;}
   const cropName=document.getElementById("cropSelect").value;
@@ -191,7 +207,6 @@ document.getElementById("btnCheck").onclick=()=>{
   let ok=(phVal>=crop[1]&&phVal<=crop[2]&&moistVal>=crop[3]&&tempVal>=crop[4]&&humVal>=crop[5]);
   document.getElementById("lblResult").innerText=ok?`✅ Suitable for ${cropName}`:`❌ Not Suitable`;
 };
-
 document.getElementById("btnAI").onclick=()=>{
   if(phVal==null){alert("Save soil values first");return;}
   const scored=cropDB.map(c=>{
@@ -204,12 +219,62 @@ document.getElementById("btnAI").onclick=()=>{
   }).sort((a,b)=>b.score-a.score);
   document.getElementById("aiList").innerText="AI Suggests: "+scored.slice(0,5).map(x=>x.name).join(", ");
 };
+document.getElementById("btnRefreshCrops").onclick=()=>{
+  populateCrops();
+  document.getElementById("lblResult").innerText="";
+  document.getElementById("aiList").innerText="";
+  setDebug("Crops refreshed.");
+};
 
+/* --- Profit buttons --- */
 document.getElementById("btnProfit").onclick=()=>{
   const cropName=document.getElementById("cropProfit").value;
   const y=parseFloat(document.getElementById("yieldInput").value||0);
   const crop=cropDB.find(c=>c[0]==cropName);
   document.getElementById("lblProfit").innerText=`Profit: ₹${(y*crop[6]).toLocaleString()}`;
+};
+document.getElementById("btnRefreshProfit").onclick=()=>{
+  document.getElementById("yieldInput").value="";
+  document.getElementById("lblProfit").innerText="";
+  setDebug("Profit section refreshed.");
+};
+
+/* --- Translator --- */
+async function translateText(text,lang){
+  const url=`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${lang}`;
+  try{const r=await fetch(url);const j=await r.json();return j.responseData.translatedText||text;}
+  catch{ return text; }
+}
+document.getElementById("btnTranslate").onclick=async()=>{
+  const txt=document.getElementById("txtTranslate").value.trim();
+  if(!txt){alert("Enter text");return;}
+  const lang=document.getElementById("langSelect").value;
+  document.getElementById("lblTranslation").innerText="Translating...";
+  const tr=await translateText(txt,lang);
+  document.getElementById("lblTranslation").innerText=tr;
+};
+document.getElementById("btnTranslateApp").onclick=async()=>{
+  const lang=document.getElementById("langSelect").value;
+  const labels=document.querySelectorAll("label,button,header");
+  for(const el of labels){
+    const t=el.innerText;
+    const tr=await translateText(t,lang);
+    el.innerText=tr;
+  }
+  alert("App UI translated (may be imperfect).");
+};
+
+/* --- Weather --- */
+document.getElementById("btnWeather").onclick=async()=>{
+  const city=document.getElementById("city").value.trim();
+  if(!city){alert("Enter city");return;}
+  try{
+    const res=await fetch(`https://wttr.in/${encodeURIComponent(city)}?format=%t+%h+%w`);
+    const txt=await res.text();
+    document.getElementById("lblWeather").innerText="Weather: "+txt;
+  } catch(e){
+    document.getElementById("lblWeather").innerText="⚠️ Weather fetch failed.";
+  }
 };
 </script>
 </body>
